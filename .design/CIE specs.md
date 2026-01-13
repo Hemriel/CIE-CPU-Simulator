@@ -26,7 +26,7 @@ The CPU must implement the following seven special-purpose registers as defined 
 
 - After each instruction fetch, PC is automatically incremented: `PC ← PC + 1`
 - Unconditional branch/jump instructions directly update PC: `PC ← target_address`
-- Conditional branches update PC only if their condition flags are set
+- Conditional branches update PC only if the comparison flag is set
 - Initial value: 0 (or configurable start address)
 
 **Memory Address Register (MAR)**
@@ -70,9 +70,10 @@ The CPU must implement the following seven special-purpose registers as defined 
   - **Negative (N)**: Set to 1 if ALU result is negative (bit 15 = 1 in two's complement); otherwise 0
   - **Carry (C)**: Set to 1 if arithmetic operation produces carry/borrow; otherwise 0
   - **Overflow (V)**: Set to 1 if arithmetic operation causes signed overflow; otherwise 0
+  - **Comparison (E)**: Set to one if the comparison was true
   - Other bits reserved for future use
-- Flags are read by conditional branch instructions (e.g., `BRZ` checks Z flag)
-- Flags are not directly modified by user code; only by ALU and compare operations
+- **E** flag is read by conditional branch instructions
+- other flags are just for illustration purposes as they are not used by the instruction set
 
 ### 1.2 System Buses
 
@@ -147,7 +148,7 @@ Execution varies by instruction type (see Part 3: Instruction Execution).
 1. Calculate effective address (if needed, based on addressing mode)
 2. Access memory (if needed)
 3. Perform ALU operation (if needed)
-4. Update flags (if ALU operation performed)
+4. Update flags (if ALU operation performed of if compare opcode)
 5. Update destination register (ACC, PC, or memory)
 
 ---
@@ -168,8 +169,6 @@ All instructions follow one of these execution patterns. Each pattern uses RTN t
 3. ACC ← MDR             (store data in accumulator)
 ```
 
-**Flags:** Z and N set based on loaded value; C and V unchanged
-
 ---
 
 ### 3.2 Store Instructions (Direct Addressing)
@@ -183,8 +182,6 @@ All instructions follow one of these execution patterns. Each pattern uses RTN t
 2. MDR ← ACC             (copy ACC to MDR)
 3. RAM[MAR] ← MDR        (write MDR to memory)
 ```
-
-**Flags:** Unchanged (store does not affect flags).
 
 ---
 
@@ -227,16 +224,12 @@ All instructions follow one of these execution patterns. Each pattern uses RTN t
 1. MAR ← operand         (operand = 30 is address)
 2. MDR ← RAM[MAR]        (read value to compare)
 3. Compute ACC - MDR     (perform subtraction, discard result)
-4. Update flags (Z, N, C, V) based on comparison
+4. Update E flag based on comparison
 ```
 
 **Flags:**
 
-- **Z**: Set if ACC = MDR (equal)
-- **N**: Set if ACC < MDR (ACC - MDR is negative)
-- **C**: Set if borrow occurs
-- **V**: Set if signed overflow occurs in subtraction
-- ACC is **not** modified; flags only
+- **E**: Set if ACC = MDR (equal)
 
 **Note:** Used to set flags before conditional branch instructions.
 
@@ -269,7 +262,7 @@ All instructions follow one of these execution patterns. Each pattern uses RTN t
 **RTN Sequence (if condition met):**
 
 ```
-If Z flag = 1 (from prior CMP/CMI):
+If E flag = 1 (from prior CMP/CMI):
   PC ← operand           (operand = 100 is target address)
 Otherwise:
   PC remains unchanged   (continue to next instruction)
@@ -281,7 +274,7 @@ Otherwise:
 
 - PC is set to target address if equality/true condition holds
 - Must be preceded by `CMP` or `CMI` instruction
-- Used to branch when operands are equal (Z flag set)
+- Used to branch when operands are equal (E flag set)
 
 ---
 
@@ -290,7 +283,7 @@ Otherwise:
 **RTN Sequence (if condition met):**
 
 ```
-If Z flag = 0 (from prior CMP/CMI):
+If E flag = 0 (from prior CMP/CMI):
   PC ← operand           (operand = 100 is target address)
 Otherwise:
   PC remains unchanged   (continue to next instruction)
@@ -302,7 +295,7 @@ Otherwise:
 
 - PC is set to target address if inequality/false condition holds
 - Must be preceded by `CMP` or `CMI` instruction
-- Used to branch when operands are not equal (Z flag clear)
+- Used to branch when operands are not equal (E flag clear)
 
 ---
 
@@ -318,8 +311,6 @@ Otherwise:
 3. MDR ← RAM[MAR]                (read from memory)
 4. ACC ← MDR                     (store in accumulator)
 ```
-
-**Flags:** Z and N set based on loaded value.
 
 **Key Point:** Index register (IX) is **added** to the base operand to calculate effective address. This enables array access and iteration.
 
@@ -343,8 +334,6 @@ Otherwise:
 5. ACC ← MDR                     (store in accumulator)
 ```
 
-**Flags:** Z and N set based on loaded value.
-
 **Key Point:** Two memory accesses required:
 
 - First access fetches the pointer (address stored in memory)
@@ -366,8 +355,6 @@ Otherwise:
 ```
 1. ACC ← operand                 (operand value = 5 is literal)
 ```
-
-**Flags:** Z and N set based on loaded value.
 
 **Key Point:**
 
@@ -506,6 +493,7 @@ Otherwise:
 - **N**: Set if ACC < data (ACC - value is negative)
 - **C**: Set if borrow occurs
 - **V**: Set if signed overflow occurs
+- **E**: Set if comparison returned True
 - ACC is **not** modified; flags only
 
 **Key Point:** Two memory accesses required (fetch pointer, then fetch data), followed by comparison.
@@ -578,38 +566,38 @@ Otherwise:
 
 ### 4.1 Instruction Set Table
 
-| Mnemonic | Operand | Description |
-|----------|---------|-------------|
-| LDM | #n | Immediate addressing. Load the number n to ACC |
-| LDD | `<address>` | Direct addressing. Load the contents of the location at the given address to ACC |
-| LDI | `<address>` | Indirect addressing. The address to be used is at the given address. Load the contents of this second address to ACC |
-| LDX | `<address>` | Indexed addressing. Form the address from `<address>` + the contents of the index register. Copy the contents of this calculated address to ACC |
-| LDR | #n | Immediate addressing. Load the number n to IX |
-| MOV | `<register>` | Move the contents of the accumulator to the given register (IX) |
-| STO | `<address>` | Store the contents of ACC at the given address |
-| ADD | `<address>` | Add the contents of the given address to the ACC |
-| ADD | #n/Bn/&n | Add the number n to the ACC |
-| SUB | `<address>` | Subtract the contents of the given address from the ACC |
-| SUB | #n/Bn/&n | Subtract the number n from the ACC |
-| INC | `<register>` | Add 1 to the contents of the register (ACC or IX) |
-| DEC | `<register>` | Subtract 1 from the contents of the register (ACC or IX) |
-| JMP | `<address>` | Jump to the given address |
-| CMP | `<address>` | Compare the contents of ACC with the contents of `<address>` |
-| CMP | #n | Compare the contents of ACC with number n |
-| CMI | `<address>` | Indirect addressing. The address to be used is at the given address. Compare the contents of ACC with the contents of this second address |
-| JPE | `<address>` | Following a compare instruction, jump to `<address>` if the compare was True |
-| JPN | `<address>` | Following a compare instruction, jump to `<address>` if the compare was False |
-| IN | (none) | Key in a character and store its ASCII value in ACC |
-| OUT | (none) | Output to the screen the character whose ASCII value is stored in ACC |
-| END | (none) | Return control to the operating system |
-| AND | #n/Bn/&n | Bitwise AND operation of the contents of ACC with the operand |
-| AND | `<address>` | Bitwise AND operation of the contents of ACC with the contents of `<address>` |
-| XOR | #n/Bn/&n | Bitwise XOR operation of the contents of ACC with the operand |
-| XOR | `<address>` | Bitwise XOR operation of the contents of ACC with the contents of `<address>` |
-| OR | #n/Bn/&n | Bitwise OR operation of the contents of ACC with the operand |
-| OR | `<address>` | Bitwise OR operation of the contents of ACC with the contents of `<address>` |
-| LSL | #n | Bits in ACC are shifted logically n places to the left. Zeros are introduced on the right hand end |
-| LSR | #n | Bits in ACC are shifted logically n places to the right. Zeros are introduced on the left hand end |
+| Opcode | Mnemonic | Operand | Description |
+|--------|----------|---------|-------------|
+| 0 | LDM | #n | Immediate addressing. Load the number n to ACC |
+| 1 | LDD | `<address>` | Direct addressing. Load the contents of the location at the given address to ACC |
+| 2 | LDI | `<address>` | Indirect addressing. The address to be used is at the given address. Load the contents of this second address to ACC |
+| 3 | LDX | `<address>` | Indexed addressing. Form the address from `<address>` + the contents of the index register. Copy the contents of this calculated address to ACC |
+| 4 | LDR | #n | Immediate addressing. Load the number n to IX |
+| 5 | MOV | `<register>` | Move the contents of the accumulator to the given register (IX) |
+| 6 | STO | `<address>` | Store the contents of ACC at the given address |
+| 7 | ADD | `<address>` | Add the contents of the given address to the ACC |
+| 8 | ADD | #n/Bn/&n | Add the number n to the ACC |
+| 9 | SUB | `<address>` | Subtract the contents of the given address from the ACC |
+| 10 | SUB | #n/Bn/&n | Subtract the number n from the ACC |
+| 11 | INC | `<register>` | Add 1 to the contents of the register (ACC or IX) |
+| 12 | DEC | `<register>` | Subtract 1 from the contents of the register (ACC or IX) |
+| 13 | JMP | `<address>` | Jump to the given address |
+| 14 | CMP | `<address>` | Compare the contents of ACC with the contents of `<address>` |
+| 15 | CMP | #n | Compare the contents of ACC with number n |
+| 16 | CMI | `<address>` | Indirect addressing. The address to be used is at the given address. Compare the contents of ACC with the contents of this second address |
+| 17 | JPE | `<address>` | Following a compare instruction, jump to `<address>` if the compare was True |
+| 18 | JPN | `<address>` | Following a compare instruction, jump to `<address>` if the compare was False |
+| 19 | IN | (none) | Key in a character and store its ASCII value in ACC |
+| 20 | OUT | (none) | Output to the screen the character whose ASCII value is stored in ACC |
+| 21 | END | (none) | Return control to the operating system |
+| 22 | AND | #n/Bn/&n | Bitwise AND operation of the contents of ACC with the operand |
+| 23 | AND | `<address>` | Bitwise AND operation of the contents of ACC with the contents of `<address>` |
+| 24 | XOR | #n/Bn/&n | Bitwise XOR operation of the contents of ACC with the operand |
+| 25 | XOR | `<address>` | Bitwise XOR operation of the contents of ACC with the contents of `<address>` |
+| 26 | OR | #n/Bn/&n | Bitwise OR operation of the contents of ACC with the operand |
+| 27 | OR | `<address>` | Bitwise OR operation of the contents of ACC with the contents of `<address>` |
+| 28 | LSL | #n | Bits in ACC are shifted logically n places to the left. Zeros are introduced on the right hand end |
+| 29 | LSR | #n | Bits in ACC are shifted logically n places to the right. Zeros are introduced on the left hand end |
 
 `<address>` can be an absolute or symbolic address\
 `#` denotes a denary number, e.g. #123\
@@ -652,7 +640,7 @@ The simulator must handle four distinct addressing modes with precise effective 
 
 - **Integer Size:** 16-bit signed two's complement
 - **Range:** –32768 to +32767
-- **Flags:** Condition flags (Z, N, C, V) in SR as single bits
+- **Flags:** Condition flag (Z, N, C, V) in SR as single bits
 
 ### 5.3 Instruction Format
 
@@ -688,6 +676,10 @@ The Control Unit must explicitly implement these states:
 
 Each state transition is driven by clock pulse; visualization should show current state.
 
+### 5.6 Control-Signal Instruction Definitions
+
+Instruction metadata should remain focused on the control signals a real CU would assert: register transfers (e.g., `MAR ← operand`), ALU operation codes, and bus routing information. The Control Unit decodes the opcode into these descriptors and orchestrates the signal sequence, while each component (register files, ALU, memory, flags) is responsible for executing the action when its drivers are asserted. This keeps components simple, mirrors the physical hardware model, and makes the instruction data reusable for both the simulator core and the fetch/decode visualization.
+
 ---
 
 ## Part 6: Educational Visualization Requirements
@@ -721,6 +713,14 @@ The UI must display (in real-time, updating each clock cycle):
    - Highlight completed steps and pending steps
 
 ---
+
+### 6.1 Textual Layout Strategy
+
+- Build the visualization inside Textual so it matches the existing suite and keeps the experience terminal-based rather than switching to a different GUI framework
+- Organize the screen into responsive panels (editor, registers, memory, buses, CU state, controls/timeline) via Textual `Layout` so widgets resize gracefully as the terminal resizes
+- Use Textual widgets such as `DataTable`, `Static`, or custom `Widget`s for registers, memory, and bus traces, driving updates from the simulator's clock ticks through `Message` signaling
+- Highlight bus transfers, flag changes, and MAR updates with Textual styling (colors, borders, blink) so the fetch/decode/execute cycle remains clear despite the ASCII canvas
+- Keep the Textual app within `cpu_sim/ui/` and expose hooks so other CPU modules can post state updates without blocking the reactive event loop
 
 ## Part 7: Alignment with CIE Exam Material
 
