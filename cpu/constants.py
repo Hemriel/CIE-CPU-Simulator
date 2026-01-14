@@ -28,11 +28,11 @@ class ComponentName(StrEnum):
     CIR = "CIR"  # Current Instruction Register
     ACC = "ACC"  # Accumulator
     IX = "IX"  # Index Register
-    CU_CONTROL = "CU_CONTROL"  # Control Unit for control purposes
-    CU_OPERAND = "CU_OPERAND"  # Control Unit Operand
+    CU = "CU"  # Control Unit
     IN = "IN"  # Stdin
     OUT = "OUT"  # Stdout
     ALU = "ALU"  # Arithmetic Logic Unit
+    STATUS_REGISTER = "STATUS_REGISTER"
     RAM_ADDRESS = "RAM_ADDRESS"
     RAM_DATA = "RAM_DATA"
     INNER_DATA_BUS = "INNER_DATA_BUS"

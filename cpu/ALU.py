@@ -9,7 +9,7 @@ from constants import ControlSignal
 class FlagComponent(Protocol):
     """A component that can update status flags based on an ALU result."""
 
-    def update_flags(self, result: int) -> None: ...
+    def update_flags(self, result: int, carry: bool, overflow: bool) -> None: ...
 
 
 @dataclass
@@ -29,6 +29,7 @@ class ALU(CPUComponent):
     operand_b: int | None = None
     result: int | None = None
     flag_component: FlagComponent | None = None
+    carry: bool = False
 
     def set_mode(self, control: ControlSignal | None) -> None:
         """Select the ALU operation mode and refresh the UI so RTN can display it."""
@@ -66,6 +67,13 @@ class ALU(CPUComponent):
                 self.result = None
 
         if self.flag_component and self.result is not None:
-            self.flag_component.update_flags(self.result)
+            self.flag_component.update_flags(self.result, False, False)
 
         self._update_display()
+
+    def _set_result(self, result: int | None) -> None:
+        """Store the computed result and refresh the UI display."""
+
+        self.carry = result is not None and (result < 0 or result >= (1 << 16))
+        self.result = result 
+

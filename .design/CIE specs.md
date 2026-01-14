@@ -645,8 +645,8 @@ The simulator must handle four distinct addressing modes with precise effective 
 ### 5.3 Instruction Format
 
 - **Size:** 16 bits total
-  - **Bits 15–11:** Opcode (5 bits; up to 32 distinct opcodes)
-  - **Bits 10–0:** Operand/Address (11 bits; allows 2048 distinct addresses or values)
+  - **Bits 15–8:** Opcode (8 bits; up to 256 distinct opcodes)
+  - **Bits 7–0:** Operand/Address (8bits for short operand, next full word for long operand (fetch during decode))
 - **Addressing Mode Indicators:** Not needed, opcodes carry indirect/indexed information, not operand.
 
 ### 5.4 Assembler (Two-Pass)

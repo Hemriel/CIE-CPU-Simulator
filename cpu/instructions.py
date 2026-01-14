@@ -25,7 +25,7 @@ class RTNStep:
 
 
 direct_addressing_RTNSteps = [
-    RTNStep(sources=[ComponentName.CU_OPERAND], destination=ComponentName.MAR),
+    RTNStep(sources=[ComponentName.CU], destination=ComponentName.MAR),
     RTNStep(sources=[ComponentName.MAR], destination=ComponentName.RAM_ADDRESS),
     RTNStep(sources=[ComponentName.RAM_DATA], destination=ComponentName.MDR),
 ]
@@ -38,7 +38,7 @@ indirect_addressing_RTNSteps = direct_addressing_RTNSteps + [
 
 indexed_addressing_RTNSteps = [
     RTNStep(
-        sources=[ComponentName.CU_OPERAND, ComponentName.IX],
+        sources=[ComponentName.CU, ComponentName.IX],
         destination=ComponentName.ALU,
         control=ControlSignal.ADD,
     ),
@@ -53,10 +53,17 @@ class InstructionDefinition:
     """Metadata that describes how an instruction behaves in terms of opcode, addressing, and RTN."""
 
     mnemonic: str
+    """Memnonic name of the instruction in assembly, e.g., 'LDM'."""
     opcode: int
+    """Numeric opcode used to identify the instruction in machine code."""
     addressing_mode: AddressingMode | None
+    """Addressing mode used by the instruction, or None for I/O instructions."""
     description: str
+    """Short human-readable description of the instruction's purpose."""
     rtn_sequence: list[RTNStep]
+    """Ordered list of RTNSteps that define the register transfers for this instruction."""
+    long_operand: bool = True
+    """Whether the instruction uses a full-length operand (True) or is short (False)."""
 
 
 instruction_set: dict[int, InstructionDefinition] = {}
@@ -68,7 +75,7 @@ LDM = InstructionDefinition(
     addressing_mode=AddressingMode.IMMEDIATE,
     description="Load immediate value into accumulator",
     rtn_sequence=[
-        RTNStep(sources=[ComponentName.CU_OPERAND], destination=ComponentName.ACC),
+        RTNStep(sources=[ComponentName.CU], destination=ComponentName.ACC),
     ],
 )
 
@@ -111,7 +118,7 @@ LDR = InstructionDefinition(
     addressing_mode=AddressingMode.IMMEDIATE,
     description="Load immediate value into index register",
     rtn_sequence=[
-        RTNStep(sources=[ComponentName.CU_OPERAND], destination=ComponentName.IX),
+        RTNStep(sources=[ComponentName.CU], destination=ComponentName.IX),
     ],
 )
 
@@ -120,8 +127,9 @@ MOV = InstructionDefinition(
     opcode=5,
     addressing_mode=AddressingMode.REGISTER,
     description="Move value from ACC to given register",
+    long_operand= False,
     rtn_sequence=[
-        RTNStep(sources=[ComponentName.ACC], destination=ComponentName.CU_OPERAND),
+        RTNStep(sources=[ComponentName.ACC], destination=ComponentName.CU),
     ],
 )
 
@@ -131,7 +139,7 @@ STO = InstructionDefinition(
     addressing_mode=AddressingMode.DIRECT,
     description="Store value from accumulator into memory",
     rtn_sequence=[
-        RTNStep(sources=[ComponentName.CU_OPERAND], destination=ComponentName.MAR),
+        RTNStep(sources=[ComponentName.CU], destination=ComponentName.MAR),
         RTNStep(sources=[ComponentName.ACC], destination=ComponentName.MDR),
         RTNStep(sources=[ComponentName.MDR], destination=ComponentName.RAM_DATA),
     ],
@@ -161,7 +169,7 @@ ADD2 = InstructionDefinition(
     description="Add immediate value to accumulator",
     rtn_sequence=[
         RTNStep(
-            sources=[ComponentName.ACC, ComponentName.CU_OPERAND],
+            sources=[ComponentName.ACC, ComponentName.CU],
             destination=ComponentName.ALU,
             control=ControlSignal.ADD,
         ),
@@ -195,7 +203,7 @@ SUB2 = InstructionDefinition(
     description="Subtract immediate value from accumulator",
     rtn_sequence=[
         RTNStep(
-            sources=[ComponentName.ACC, ComponentName.CU_OPERAND],
+            sources=[ComponentName.ACC, ComponentName.CU],
             destination=ComponentName.ALU,
             control=ControlSignal.SUB,
         ),
@@ -208,11 +216,12 @@ INC = InstructionDefinition(
     mnemonic="INC",
     opcode=11,
     addressing_mode=AddressingMode.REGISTER,
-    description="Increment accumulator by 1",
+    description="Increment register (ACC, IX) by 1",
+    long_operand= False,
     rtn_sequence=[
         RTNStep(
-            sources=[ComponentName.CU_OPERAND],
-            destination=ComponentName.CU_OPERAND,
+            sources=[ComponentName.CU],
+            destination=ComponentName.CU,
             control=ControlSignal.INC,
         ),
     ],
@@ -222,11 +231,12 @@ DEC = InstructionDefinition(
     mnemonic="DEC",
     opcode=12,
     addressing_mode=AddressingMode.REGISTER,
-    description="Decrement accumulator by 1",
+    description="Decrement register (ACC, IX) by 1",
+    long_operand= False,
     rtn_sequence=[
         RTNStep(
-            sources=[ComponentName.CU_OPERAND],
-            destination=ComponentName.CU_OPERAND,
+            sources=[ComponentName.CU],
+            destination=ComponentName.CU,
             control=ControlSignal.DEC,
         ),
     ],
@@ -238,7 +248,7 @@ JMP = InstructionDefinition(
     addressing_mode=AddressingMode.IMMEDIATE,
     description="Jump to address in operand",
     rtn_sequence=[
-        RTNStep(sources=[ComponentName.CU_OPERAND], destination=ComponentName.PC),
+        RTNStep(sources=[ComponentName.CU], destination=ComponentName.PC),
     ],
 )
 
@@ -266,7 +276,7 @@ CMP2 = InstructionDefinition(
     description="Compare immediate value with accumulator",
     rtn_sequence=[
         RTNStep(
-            sources=[ComponentName.ACC, ComponentName.CU_OPERAND],
+            sources=[ComponentName.ACC, ComponentName.CU],
             destination=ComponentName.ALU,
             control=ControlSignal.CMP,
         ),
@@ -296,7 +306,7 @@ JPE = InstructionDefinition(
     description="Jump to address in operand if E flag is set",
     rtn_sequence=[
         RTNStep(
-            sources=[ComponentName.CU_OPERAND],
+            sources=[ComponentName.CU],
             destination=ComponentName.PC,
             note="if E flag is set",
         ),
@@ -310,7 +320,7 @@ JPN = InstructionDefinition(
     description="Jump to address in operand if E flag is cleared",
     rtn_sequence=[
         RTNStep(
-            sources=[ComponentName.CU_OPERAND],
+            sources=[ComponentName.CU],
             destination=ComponentName.PC,
             note="if E flag is cleared",
         ),
@@ -322,6 +332,7 @@ IN = InstructionDefinition(
     opcode=19,
     description="Input value from input queue into accumulator",
     addressing_mode=None,
+    long_operand= False,
     rtn_sequence=[
         RTNStep(sources=[ComponentName.IN], destination=ComponentName.ACC),
     ],
@@ -332,6 +343,7 @@ OUT = InstructionDefinition(
     opcode=20,
     description="Output value from accumulator to output queue",
     addressing_mode=None,
+    long_operand= False,
     rtn_sequence=[
         RTNStep(sources=[ComponentName.ACC], destination=ComponentName.OUT),
     ],
@@ -342,6 +354,7 @@ END = InstructionDefinition(
     opcode=21,
     description="Halt program execution",
     addressing_mode=None,
+    long_operand= False,
     rtn_sequence=[],
 )
 
@@ -353,7 +366,7 @@ AND1 = InstructionDefinition(
     description="Bitwise AND immediate value with accumulator",
     rtn_sequence=[
         RTNStep(
-            sources=[ComponentName.ACC, ComponentName.CU_OPERAND],
+            sources=[ComponentName.ACC, ComponentName.CU],
             destination=ComponentName.ALU,
             control=ControlSignal.AND,
         ),
@@ -387,7 +400,7 @@ XOR1 = InstructionDefinition(
     description="Bitwise XOR immediate value with accumulator",
     rtn_sequence=[
         RTNStep(
-            sources=[ComponentName.ACC, ComponentName.CU_OPERAND],
+            sources=[ComponentName.ACC, ComponentName.CU],
             destination=ComponentName.ALU,
             control=ControlSignal.XOR,
         ),
@@ -421,7 +434,7 @@ OR1 = InstructionDefinition(
     description="Bitwise OR immediate value with accumulator",
     rtn_sequence=[
         RTNStep(
-            sources=[ComponentName.ACC, ComponentName.CU_OPERAND],
+            sources=[ComponentName.ACC, ComponentName.CU],
             destination=ComponentName.ALU,
             control=ControlSignal.OR,
         ),
@@ -452,9 +465,10 @@ LSL = InstructionDefinition(
     opcode=28,
     addressing_mode=AddressingMode.IMMEDIATE,
     description="Logical shift left accumulator by immediate value",
+    long_operand= False,
     rtn_sequence=[
         RTNStep(
-            sources=[ComponentName.ACC, ComponentName.CU_OPERAND],
+            sources=[ComponentName.ACC, ComponentName.CU],
             destination=ComponentName.ALU,
             control=ControlSignal.LSL,
         ),
@@ -467,9 +481,10 @@ LSR = InstructionDefinition(
     opcode=29,
     addressing_mode=AddressingMode.IMMEDIATE,
     description="Logical shift right accumulator by immediate value",
+    long_operand= False,
     rtn_sequence=[
         RTNStep(
-            sources=[ComponentName.ACC, ComponentName.CU_OPERAND],
+            sources=[ComponentName.ACC, ComponentName.CU],
             destination=ComponentName.ALU,
             control=ControlSignal.LSR,
         ),
