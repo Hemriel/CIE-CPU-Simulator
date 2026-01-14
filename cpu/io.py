@@ -1,0 +1,32 @@
+"""I/O component that feeds ASCII characters into and out of the simulated CPU."""
+
+from dataclasses import dataclass
+from component import CPUComponent
+
+
+@dataclass
+class IO(CPUComponent):
+    """Simplified device holding queued ASCII characters for IN/OUT visualization.
+
+    Attributes:
+        contents: The pending characters represented as an ASCII string so IN/OUT match
+            the CIE requirement to transfer ASCII values one character at a time.
+    """
+
+    contents: str = ""
+
+    def push(self, data: int) -> None:
+        """Enqueue a byte by converting it to an ASCII character and refreshing the UI."""
+
+        self.contents += chr(data)
+        self._update_display()
+
+    def pull(self) -> int | None:
+        """Dequeue the next ASCII character, return it as its ordinal, and update visuals."""
+
+        if self.contents:
+            data = ord(self.contents[0])
+            self.contents = self.contents[1:]
+            self._update_display()
+            return data
+        return None
