@@ -23,7 +23,7 @@ class TerminalDisplayer():
         return "TerminalDisplayer"
 
 @dataclass
-class CPUComponent:
+class CPUComponent(Protocol):
     """Base class for components that tracks an official ComponentName and display hook.
 
     The provided `name` must match a member of ComponentName so the UI can query and
@@ -41,3 +41,10 @@ class CPUComponent:
         if self.displayer:
             self.displayer.update_display()
 
+    def read(self) -> int:
+        """Read data from the component. To be implemented by subclasses."""
+        raise NotImplementedError("Subclasses must implement the read method.")
+    
+    def write(self, data: int) -> None:
+        """Write data to the component. To be implemented by subclasses."""
+        raise NotImplementedError("Subclasses must implement the write method.")

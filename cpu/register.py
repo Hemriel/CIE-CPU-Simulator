@@ -6,7 +6,7 @@ from component import CPUComponent
 
 
 @dataclass
-class register(CPUComponent):
+class Register(CPUComponent):
     """A general-purpose register with control signal tracking for RTN visualization.
 
     Attributes:

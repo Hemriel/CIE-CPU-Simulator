@@ -11,40 +11,59 @@ Design notes:
 """
 
 from dataclasses import dataclass
-from constants import AddressingMode, ControlSignal, ComponentName
+from constants import AddressingMode, ControlSignal, ComponentName, RTNTypes
 
 
 @dataclass
 class RTNStep:
     """A declarative register-transfer step used by the UI and the simulator to explain instruction timing."""
+    ...
 
-    sources: list[ComponentName]
+@dataclass
+class SimpleTransferStep(RTNStep):
+    source: ComponentName
     destination: ComponentName
-    control: ControlSignal | None = None
-    note: str | None = None
 
+@dataclass
+class ConditionalTransferStep(SimpleTransferStep):
+    condition: bool = True
+    """A simple transfer that only occurs if the cmp flag matches the condition."""
+
+@dataclass
+class MemoryAccessStep(RTNStep):
+    is_address: bool = True
+    control: ControlSignal = ControlSignal.READ
+
+@dataclass
+class ALUOperationStep(RTNStep):
+    source: ComponentName
+    control: ControlSignal
+
+@dataclass
+class RegOperationStep(RTNStep):
+    destination: ComponentName
+    control: ControlSignal
+    source: ComponentName | None = None
+    """A register operation step, such as INC or DEC, possibly involving a source register."""
 
 direct_addressing_RTNSteps = [
-    RTNStep(sources=[ComponentName.CU], destination=ComponentName.MAR),
-    RTNStep(sources=[ComponentName.MAR], destination=ComponentName.RAM_ADDRESS),
-    RTNStep(sources=[ComponentName.RAM_DATA], destination=ComponentName.MDR),
+    SimpleTransferStep(source=ComponentName.MDR, destination=ComponentName.MAR),
+    MemoryAccessStep(),
+    MemoryAccessStep(is_address=False),
 ]
 
 indirect_addressing_RTNSteps = direct_addressing_RTNSteps + [
-    RTNStep(sources=[ComponentName.MDR], destination=ComponentName.MAR),
-    RTNStep(sources=[ComponentName.MAR], destination=ComponentName.RAM_ADDRESS),
-    RTNStep(sources=[ComponentName.RAM_DATA], destination=ComponentName.MDR),
+    SimpleTransferStep(source=ComponentName.MDR, destination=ComponentName.MAR),
+    MemoryAccessStep(),
+    MemoryAccessStep(is_address=False),
 ]
 
 indexed_addressing_RTNSteps = [
-    RTNStep(
-        sources=[ComponentName.CU, ComponentName.IX],
-        destination=ComponentName.ALU,
-        control=ControlSignal.ADD,
-    ),
-    RTNStep(sources=[ComponentName.ALU], destination=ComponentName.MAR),
-    RTNStep(sources=[ComponentName.MAR], destination=ComponentName.RAM_ADDRESS),
-    RTNStep(sources=[ComponentName.RAM_DATA], destination=ComponentName.MDR),
+    SimpleTransferStep(
+        source=ComponentName.MDR, destination=ComponentName.MAR),
+    RegOperationStep(source=ComponentName.IX, destination=ComponentName.MAR, control=ControlSignal.INC),
+    MemoryAccessStep(),
+    MemoryAccessStep(is_address=False),
 ]
 
 
@@ -63,7 +82,9 @@ class InstructionDefinition:
     rtn_sequence: list[RTNStep]
     """Ordered list of RTNSteps that define the register transfers for this instruction."""
     long_operand: bool = True
-    """Whether the instruction uses a full-length operand (True) or is short (False)."""
+    """Whether the instruction uses a full-length operand (True) or is short (False).
+    Short instruction should then assume operand value store in CU, and long ones should
+    assume operand value store in MDR after long operand fetch."""
 
 
 instruction_set: dict[int, InstructionDefinition] = {}
@@ -75,7 +96,7 @@ LDM = InstructionDefinition(
     addressing_mode=AddressingMode.IMMEDIATE,
     description="Load immediate value into accumulator",
     rtn_sequence=[
-        RTNStep(sources=[ComponentName.CU], destination=ComponentName.ACC),
+        SimpleTransferStep(source=ComponentName.MDR, destination=ComponentName.ACC),
     ],
 )
 
@@ -86,7 +107,7 @@ LDD = InstructionDefinition(
     description="Load value from memory into accumulator",
     rtn_sequence=direct_addressing_RTNSteps
     + [
-        RTNStep(sources=[ComponentName.MDR], destination=ComponentName.ACC),
+        SimpleTransferStep(source=ComponentName.MDR, destination=ComponentName.ACC),
     ],
 )
 
@@ -97,7 +118,7 @@ LDI = InstructionDefinition(
     description="Load value from memory address pointed to by operand into accumulator",
     rtn_sequence=indirect_addressing_RTNSteps
     + [
-        RTNStep(sources=[ComponentName.MDR], destination=ComponentName.ACC),
+        SimpleTransferStep(source=ComponentName.MDR, destination=ComponentName.ACC),
     ],
 )
 
@@ -108,7 +129,7 @@ LDX = InstructionDefinition(
     description="Load value from memory address computed by adding index register to operand into accumulator",
     rtn_sequence=indexed_addressing_RTNSteps
     + [
-        RTNStep(sources=[ComponentName.MDR], destination=ComponentName.ACC),
+        SimpleTransferStep(source=ComponentName.MDR, destination=ComponentName.ACC),
     ],
 )
 
@@ -118,7 +139,7 @@ LDR = InstructionDefinition(
     addressing_mode=AddressingMode.IMMEDIATE,
     description="Load immediate value into index register",
     rtn_sequence=[
-        RTNStep(sources=[ComponentName.CU], destination=ComponentName.IX),
+        SimpleTransferStep(source=ComponentName.MDR, destination=ComponentName.IX),
     ],
 )
 
@@ -129,7 +150,7 @@ MOV = InstructionDefinition(
     description="Move value from ACC to given register",
     long_operand= False,
     rtn_sequence=[
-        RTNStep(sources=[ComponentName.ACC], destination=ComponentName.CU),
+        SimpleTransferStep(source=ComponentName.ACC, destination=ComponentName.OPERAND),
     ],
 )
 
@@ -139,9 +160,10 @@ STO = InstructionDefinition(
     addressing_mode=AddressingMode.DIRECT,
     description="Store value from accumulator into memory",
     rtn_sequence=[
-        RTNStep(sources=[ComponentName.CU], destination=ComponentName.MAR),
-        RTNStep(sources=[ComponentName.ACC], destination=ComponentName.MDR),
-        RTNStep(sources=[ComponentName.MDR], destination=ComponentName.RAM_DATA),
+        SimpleTransferStep(source=ComponentName.MDR, destination=ComponentName.MAR),
+        SimpleTransferStep(source=ComponentName.ACC, destination=ComponentName.MDR),
+        MemoryAccessStep(),
+        MemoryAccessStep(is_address=False, control=ControlSignal.WRITE),
     ],
 )
 
@@ -152,12 +174,11 @@ ADD1 = InstructionDefinition(
     description="Add value from memory to accumulator",
     rtn_sequence=direct_addressing_RTNSteps
     + [
-        RTNStep(
-            sources=[ComponentName.ACC, ComponentName.MDR],
-            destination=ComponentName.ALU,
+        ALUOperationStep(
+            source=ComponentName.MDR,
             control=ControlSignal.ADD,
         ),
-        RTNStep(sources=[ComponentName.ALU], destination=ComponentName.ACC),
+        SimpleTransferStep(source=ComponentName.ALU, destination=ComponentName.ACC),
     ],
 )
 """Direct addressing version of the ADD instruction."""
@@ -168,12 +189,11 @@ ADD2 = InstructionDefinition(
     addressing_mode=AddressingMode.IMMEDIATE,
     description="Add immediate value to accumulator",
     rtn_sequence=[
-        RTNStep(
-            sources=[ComponentName.ACC, ComponentName.CU],
-            destination=ComponentName.ALU,
+        ALUOperationStep(
+            source=ComponentName.MDR,
             control=ControlSignal.ADD,
         ),
-        RTNStep(sources=[ComponentName.ALU], destination=ComponentName.ACC),
+        SimpleTransferStep(source=ComponentName.ALU, destination=ComponentName.ACC),
     ],
 )
 """Immediate addressing version of the ADD instruction."""
@@ -186,12 +206,11 @@ SUB1 = InstructionDefinition(
     description="Subtract value from memory from accumulator",
     rtn_sequence=direct_addressing_RTNSteps
     + [
-        RTNStep(
-            sources=[ComponentName.ACC, ComponentName.MDR],
-            destination=ComponentName.ALU,
+        ALUOperationStep(
+            source=ComponentName.MDR,
             control=ControlSignal.SUB,
         ),
-        RTNStep(sources=[ComponentName.ALU], destination=ComponentName.ACC),
+        SimpleTransferStep(source=ComponentName.ALU, destination=ComponentName.ACC),
     ],
 )
 """Direct addressing version of the SUB instruction."""
@@ -202,12 +221,11 @@ SUB2 = InstructionDefinition(
     addressing_mode=AddressingMode.IMMEDIATE,
     description="Subtract immediate value from accumulator",
     rtn_sequence=[
-        RTNStep(
-            sources=[ComponentName.ACC, ComponentName.CU],
-            destination=ComponentName.ALU,
+        ALUOperationStep(
+            source=ComponentName.MDR,
             control=ControlSignal.SUB,
         ),
-        RTNStep(sources=[ComponentName.ALU], destination=ComponentName.ACC),
+        SimpleTransferStep(source=ComponentName.ALU, destination=ComponentName.ACC),
     ],
 )
 """Immediate addressing version of the SUB instruction."""
@@ -216,14 +234,13 @@ INC = InstructionDefinition(
     mnemonic="INC",
     opcode=11,
     addressing_mode=AddressingMode.REGISTER,
-    description="Increment register (ACC, IX) by 1",
+    description="Increment register (ACC, IX, CU) by 1",
     long_operand= False,
     rtn_sequence=[
-        RTNStep(
-            sources=[ComponentName.CU],
-            destination=ComponentName.CU,
+        RegOperationStep(
+            destination=ComponentName.OPERAND,
             control=ControlSignal.INC,
-        ),
+        )
     ],
 )
 
@@ -231,12 +248,11 @@ DEC = InstructionDefinition(
     mnemonic="DEC",
     opcode=12,
     addressing_mode=AddressingMode.REGISTER,
-    description="Decrement register (ACC, IX) by 1",
+    description="Decrement register (ACC, IX, CU) by 1",
     long_operand= False,
     rtn_sequence=[
-        RTNStep(
-            sources=[ComponentName.CU],
-            destination=ComponentName.CU,
+        RegOperationStep(
+            destination=ComponentName.OPERAND,
             control=ControlSignal.DEC,
         ),
     ],
@@ -248,7 +264,7 @@ JMP = InstructionDefinition(
     addressing_mode=AddressingMode.IMMEDIATE,
     description="Jump to address in operand",
     rtn_sequence=[
-        RTNStep(sources=[ComponentName.CU], destination=ComponentName.PC),
+        SimpleTransferStep(source=ComponentName.MDR, destination=ComponentName.PC),
     ],
 )
 
@@ -260,9 +276,8 @@ CMP1 = InstructionDefinition(
     description="Compare value from memory with accumulator",
     rtn_sequence=direct_addressing_RTNSteps
     + [
-        RTNStep(
-            sources=[ComponentName.ACC, ComponentName.MDR],
-            destination=ComponentName.ALU,
+        ALUOperationStep(
+            source=ComponentName.MDR,
             control=ControlSignal.CMP,
         ),
     ],
@@ -275,9 +290,8 @@ CMP2 = InstructionDefinition(
     addressing_mode=AddressingMode.IMMEDIATE,
     description="Compare immediate value with accumulator",
     rtn_sequence=[
-        RTNStep(
-            sources=[ComponentName.ACC, ComponentName.CU],
-            destination=ComponentName.ALU,
+        ALUOperationStep(
+            source=ComponentName.MDR,
             control=ControlSignal.CMP,
         ),
     ],
@@ -291,9 +305,8 @@ CMI = InstructionDefinition(
     description="Compare ACC to the value at the memory address pointed to by operand",
     rtn_sequence=indirect_addressing_RTNSteps
     + [
-        RTNStep(
-            sources=[ComponentName.ACC, ComponentName.MDR],
-            destination=ComponentName.ALU,
+        ALUOperationStep(
+            source=ComponentName.MDR,
             control=ControlSignal.CMP,
         ),
     ],
@@ -305,10 +318,10 @@ JPE = InstructionDefinition(
     addressing_mode=AddressingMode.IMMEDIATE,
     description="Jump to address in operand if E flag is set",
     rtn_sequence=[
-        RTNStep(
-            sources=[ComponentName.CU],
+        ConditionalTransferStep(
+            source=ComponentName.MDR,
             destination=ComponentName.PC,
-            note="if E flag is set",
+            condition=True,
         ),
     ],
 )
@@ -319,10 +332,10 @@ JPN = InstructionDefinition(
     addressing_mode=AddressingMode.IMMEDIATE,
     description="Jump to address in operand if E flag is cleared",
     rtn_sequence=[
-        RTNStep(
-            sources=[ComponentName.CU],
+        ConditionalTransferStep(
+            source=ComponentName.MDR,
             destination=ComponentName.PC,
-            note="if E flag is cleared",
+            condition=False,
         ),
     ],
 )
@@ -334,7 +347,7 @@ IN = InstructionDefinition(
     addressing_mode=None,
     long_operand= False,
     rtn_sequence=[
-        RTNStep(sources=[ComponentName.IN], destination=ComponentName.ACC),
+        SimpleTransferStep(source=ComponentName.IN, destination=ComponentName.ACC),
     ],
 )
 
@@ -345,7 +358,7 @@ OUT = InstructionDefinition(
     addressing_mode=None,
     long_operand= False,
     rtn_sequence=[
-        RTNStep(sources=[ComponentName.ACC], destination=ComponentName.OUT),
+        SimpleTransferStep(source=ComponentName.ACC, destination=ComponentName.OUT),
     ],
 )
 
@@ -365,12 +378,11 @@ AND1 = InstructionDefinition(
     addressing_mode=AddressingMode.IMMEDIATE,
     description="Bitwise AND immediate value with accumulator",
     rtn_sequence=[
-        RTNStep(
-            sources=[ComponentName.ACC, ComponentName.CU],
-            destination=ComponentName.ALU,
+        ALUOperationStep(
+            source=ComponentName.MDR,
             control=ControlSignal.AND,
         ),
-        RTNStep(sources=[ComponentName.ALU], destination=ComponentName.ACC),
+        SimpleTransferStep(source=ComponentName.ALU, destination=ComponentName.ACC),
     ],
 )
 """Immediate addressing version of the AND instruction."""
@@ -382,12 +394,11 @@ AND2 = InstructionDefinition(
     description="Bitwise AND value from memory with accumulator",
     rtn_sequence=direct_addressing_RTNSteps
     + [
-        RTNStep(
-            sources=[ComponentName.ACC, ComponentName.MDR],
-            destination=ComponentName.ALU,
+        ALUOperationStep(
+            source=ComponentName.MDR,
             control=ControlSignal.AND,
         ),
-        RTNStep(sources=[ComponentName.ALU], destination=ComponentName.ACC),
+        SimpleTransferStep(source=ComponentName.ALU, destination=ComponentName.ACC),
     ],
 )
 """Direct addressing version of the AND instruction."""
@@ -399,12 +410,11 @@ XOR1 = InstructionDefinition(
     addressing_mode=AddressingMode.IMMEDIATE,
     description="Bitwise XOR immediate value with accumulator",
     rtn_sequence=[
-        RTNStep(
-            sources=[ComponentName.ACC, ComponentName.CU],
-            destination=ComponentName.ALU,
+        ALUOperationStep(
+            source=ComponentName.MDR,
             control=ControlSignal.XOR,
         ),
-        RTNStep(sources=[ComponentName.ALU], destination=ComponentName.ACC),
+        SimpleTransferStep(source=ComponentName.ALU, destination=ComponentName.ACC),
     ],
 )
 """Immediate addressing version of the XOR instruction."""
@@ -416,12 +426,11 @@ XOR2 = InstructionDefinition(
     description="Bitwise XOR value from memory with accumulator",
     rtn_sequence=direct_addressing_RTNSteps
     + [
-        RTNStep(
-            sources=[ComponentName.ACC, ComponentName.MDR],
-            destination=ComponentName.ALU,
+        ALUOperationStep(
+            source=ComponentName.MDR,
             control=ControlSignal.XOR,
         ),
-        RTNStep(sources=[ComponentName.ALU], destination=ComponentName.ACC),
+        SimpleTransferStep(source=ComponentName.ALU, destination=ComponentName.ACC),
     ],
 )
 """Direct addressing version of the XOR instruction."""
@@ -433,12 +442,11 @@ OR1 = InstructionDefinition(
     addressing_mode=AddressingMode.IMMEDIATE,
     description="Bitwise OR immediate value with accumulator",
     rtn_sequence=[
-        RTNStep(
-            sources=[ComponentName.ACC, ComponentName.CU],
-            destination=ComponentName.ALU,
+        ALUOperationStep(
+            source=ComponentName.MDR,
             control=ControlSignal.OR,
         ),
-        RTNStep(sources=[ComponentName.ALU], destination=ComponentName.ACC),
+        SimpleTransferStep(source=ComponentName.ALU, destination=ComponentName.ACC),
     ],
 )
 """Immediate addressing version of the OR instruction."""
@@ -450,12 +458,11 @@ OR2 = InstructionDefinition(
     description="Bitwise OR value from memory with accumulator",
     rtn_sequence=direct_addressing_RTNSteps
     + [
-        RTNStep(
-            sources=[ComponentName.ACC, ComponentName.MDR],
-            destination=ComponentName.ALU,
+        ALUOperationStep(
+            source=ComponentName.MDR,
             control=ControlSignal.OR,
         ),
-        RTNStep(sources=[ComponentName.ALU], destination=ComponentName.ACC),
+        SimpleTransferStep(source=ComponentName.ALU, destination=ComponentName.ACC),
     ],
 )
 """Direct addressing version of the OR instruction."""
@@ -467,12 +474,11 @@ LSL = InstructionDefinition(
     description="Logical shift left accumulator by immediate value",
     long_operand= False,
     rtn_sequence=[
-        RTNStep(
-            sources=[ComponentName.ACC, ComponentName.CU],
-            destination=ComponentName.ALU,
+        ALUOperationStep(
+            source=ComponentName.CU,
             control=ControlSignal.LSL,
         ),
-        RTNStep(sources=[ComponentName.ALU], destination=ComponentName.ACC),
+        SimpleTransferStep(source=ComponentName.ALU, destination=ComponentName.ACC),
     ],
 )
 
@@ -483,12 +489,11 @@ LSR = InstructionDefinition(
     description="Logical shift right accumulator by immediate value",
     long_operand= False,
     rtn_sequence=[
-        RTNStep(
-            sources=[ComponentName.ACC, ComponentName.CU],
-            destination=ComponentName.ALU,
+        ALUOperationStep(
+            source=ComponentName.CU,
             control=ControlSignal.LSR,
         ),
-        RTNStep(sources=[ComponentName.ALU], destination=ComponentName.ACC),
+        SimpleTransferStep(source=ComponentName.ALU, destination=ComponentName.ACC),
     ],
 )
 
@@ -524,3 +529,22 @@ instruction_set = {
     LSL.opcode: LSL,
     LSR.opcode: LSR,
 }
+
+FETCH_RTNSteps: list[RTNStep] = [
+    SimpleTransferStep(source=ComponentName.PC, destination=ComponentName.MAR),
+    MemoryAccessStep(),
+    MemoryAccessStep(is_address=False),
+    SimpleTransferStep(source=ComponentName.MDR, destination=ComponentName.CIR),
+    RegOperationStep(destination=ComponentName.PC, control=ControlSignal.INC),
+]
+
+DECODE_RTNSteps: list[RTNStep] = [
+    SimpleTransferStep(source=ComponentName.CIR, destination=ComponentName.CU),
+]
+
+FETCH_LONG_OPERAND_RTNSteps: list[RTNStep] = [
+    SimpleTransferStep(source=ComponentName.PC, destination=ComponentName.MAR),
+    MemoryAccessStep(),
+    MemoryAccessStep(is_address=False),
+    RegOperationStep(destination=ComponentName.PC, control=ControlSignal.INC),
+]

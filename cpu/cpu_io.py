@@ -15,13 +15,13 @@ class IO(CPUComponent):
 
     contents: str = ""
 
-    def push(self, data: int) -> None:
+    def write(self, data: int) -> None:
         """Enqueue a byte by converting it to an ASCII character and refreshing the UI."""
 
         self.contents += chr(data)
         self._update_display()
 
-    def pull(self) -> int | None:
+    def read(self) -> int | None:
         """Dequeue the next ASCII character, return it as its ordinal, and update visuals."""
 
         if self.contents:
