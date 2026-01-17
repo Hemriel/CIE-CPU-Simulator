@@ -1,7 +1,7 @@
 """Register implementation for the CIE CPU simulator, tracking value and control state."""
 
 from dataclasses import dataclass
-from constants import WORD_SIZE, ControlSignal
+from constants import WORD_SIZE, ComponentName, ControlSignal
 from component import CPUComponent
 
 
@@ -13,7 +13,7 @@ class Register(CPUComponent):
         _control: The current ControlSignal asserted for this register or None when idle.
         _value: The stored word-sized integer value that wraps around when it overflows.
     """
-
+    name: ComponentName
     _control: ControlSignal | None = None
     _value: int = 0
 
@@ -51,3 +51,9 @@ class Register(CPUComponent):
         """Clear any active control signal so the register appears idle."""
         self._set_control(None)
         self._update_display()
+    
+    def _update_display(self):
+        return super()._update_display()
+
+    def __repr__(self) -> str:
+        return (f"{self._value:04X}")

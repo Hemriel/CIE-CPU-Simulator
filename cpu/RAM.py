@@ -1,4 +1,4 @@
-from constants import ComponentName
+from constants import ComponentName, WORD_SIZE
 from dataclasses import dataclass, field
 
 from component import CPUComponent
@@ -22,6 +22,9 @@ class RAMAddress(CPUComponent):
         self.address = address
         self._update_display()
 
+    def __repr__(self) -> str:
+        return f"{self.address:04X}"
+
 @dataclass
 class RAM(CPUComponent):
     """Simple model of RAM with address and data registers.
@@ -32,18 +35,21 @@ class RAM(CPUComponent):
         memory: internal dictionary simulating RAM storage.
     """
     name: ComponentName = ComponentName.RAM_DATA
-    address_comp: RAMAddress = RAMAddress(ComponentName.RAM_ADDRESS)
-    memory: dict[int, int] = field(default_factory=lambda: dict((n, 0) for n in range(2**16)))
+    address_comp: RAMAddress = field(default_factory=lambda: RAMAddress(ComponentName.RAM_ADDRESS))
+    memory: dict[int, int] = field(default_factory=lambda: dict((n, 0) for n in range(2**WORD_SIZE)))
 
     def read(self) -> int | None:
         """Read data from the specified RAM address."""
         address = self.address_comp.read()
         self.data = self.memory.get(address)
-        self._update_display()
+        # self._update_display()
         return self.data
 
     def write(self, data: int) -> None:
         """Write data to the specified RAM address."""
         address = self.address_comp.read()
-        self.memory[address] = data
-        self._update_display()
+        self.memory[address] = data % (1 << WORD_SIZE)  # Assuming WORD_SIZE-bit RAM words
+        # self._update_display()
+
+    def __repr__(self) -> str:
+        return f"Size: {len(self.memory)} words"

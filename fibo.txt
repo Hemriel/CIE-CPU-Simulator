@@ -1,0 +1,58 @@
+; Fibonacci program (first 20 numbers, stored sequentially starting at address 200)
+
+LDR &C8            ; IX ← 200 (base address for results)            ; 0400
+                                                                    ; 00C8
+LDM #0             ; ACC ← 0 (first Fibonacci value)                ; 0000
+                                                                    ; 0000
+STO &C0            ; PREV ← 0                                       ; 0600
+                                                                    ; 00C0
+STX #0             ; store 0 at IX + 0 → RAM[200]                   ; 1F00
+                                                                    ; 0000
+INC #1             ; IX ← IX + 1                                    ; 0B01
+LDM #1             ; ACC ← 1 (second Fibonacci value)               ; 0000
+                                                                    ; 0001
+STO &C1            ; CURR ← 1                                       ; 0600
+                                                                    ; 00C1
+STX #0             ; store 1 at RAM[201]                            ; 1F00
+                                                                    ; 0000
+INC #1             ; prepare IX for the next output slot            ; 0B01
+LDM #18            ; plan to compute 18 more values (total 20)      ; 0000
+                                                                    ; 0012
+STO &C3            ; COUNTER ← 18                                   ; 0600
+                                                                    ; 00C3
+
+LOOP:
+LDD &C3            ; reload COUNTER                                 ; 0100
+                                                                    ; 00C3 : loop
+CMP2 #0            ; is COUNTER zero yet?                           ; 0F00
+                                                                    ; 0000
+JPE END            ; if yes, we have our 20 numbers                 ; 1100
+                                                                    ; 00 END
+LDD &C0            ; ACC ← PREV                                     ; 0100
+                                                                    ; 00C0
+ADD1 &C1           ; ACC ← ACC + CURR (next Fibonacci)              ; 0700
+                                                                    ; 00C1
+STO &C2            ; TMP ← new value                                ; 0600
+                                                                    ; 00C2
+STX #0             ; store the new value at the next output slot    ; 1F00
+                                                                    ; 0000
+INC #1             ; advance IX for the following output            ; 0B01
+LDD &C1            ; ACC ← CURR                                     ; 0100
+                                                                    ; 00C1
+STO &C0            ; PREV ← old CURR                                ; 0600
+                                                                    ; 00C0
+LDD &C2            ; ACC ← TMP                                      ; 0100
+                                                                    ; 00C2
+STO &C1            ; CURR ← newest value                            ; 0600
+                                                                    ; 00C1
+LDD &C3            ; reload COUNTER                                 ; 0100
+                                                                    ; 00C3
+SUB2 #1            ; decrement the loop counter                     ; 0A00
+                                                                    ; 0001
+STO &C3            ; write back COUNTER                             ; 0600
+                                                                    ; 00C3
+JMP LOOP           ; repeat until COUNTER hits zero                 ; 0D00
+                                                                    ; 00 loop
+
+END:
+END               ; halt ; 1500

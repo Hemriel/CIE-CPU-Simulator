@@ -89,13 +89,18 @@ class RTNTypes(StrEnum):
     REG_OPERATION = "reg_operation"
     MEMORY_ACCESS = "memory_access"
     
-class CyclePhases(StrEnum):
+class CyclePhase(StrEnum):
     """Labels for different phases within a CPU cycle."""
 
     FETCH = "fetch"
     DECODE = "decode"
     EXECUTE = "execute"
 
-CYCLE_PHASES = cycle([CyclePhases.FETCH, CyclePhases.DECODE, CyclePhases.EXECUTE])
+CYCLE_PHASES = cycle([CyclePhase.FETCH, CyclePhase.DECODE, CyclePhase.EXECUTE])
 WORD_SIZE = 16  # in bits
 """bit width for general-purpose registers and the ALU operations."""
+
+
+if __name__ == "__main__":
+    # Quick test to verify that all enums can be iterated and printed.
+    print(CYCLE_PHASES.__next__())

@@ -2,8 +2,15 @@
 
 from dataclasses import dataclass, field
 from component import CPUComponent
-from constants import ComponentName, ControlSignal, CYCLE_PHASES, MissingComponentError, RegisterIndex
-from cpu.ALU import ALU, FlagComponent
+from constants import (
+    ComponentName,
+    ControlSignal,
+    CYCLE_PHASES,
+    CyclePhase,
+    MissingComponentError,
+    RegisterIndex,
+)
+from ALU import ALU, FlagComponent
 from register import Register
 from buses import Bus
 from RAM import RAM, RAMAddress
@@ -16,27 +23,28 @@ from instructions import (
     MemoryAccessStep,
     RegOperationStep,
     ConditionalTransferStep,
-    FETCH_RTNSteps, 
-    DECODE_RTNSteps, 
+    FETCH_RTNSteps,
+    DECODE_RTNSteps,
     FETCH_LONG_OPERAND_RTNSteps,
 )
 
+
 def create_required_components_for_CU(
-        mar: Register,
-        mdr: Register,
-        pc: Register,
-        cir: Register,
-        acc: Register,
-        ix: Register,
-        alu: ALU,
-        cmp_flag: FlagComponent,
-        address_bus: Bus,
-        inner_data_bus: Bus,
-        outer_data_bus: Bus,
-        ram_address: RAMAddress,
-        ram_data: RAM,
-        in_component: IO,
-        out_component: IO,
+    mar: Register,
+    mdr: Register,
+    pc: Register,
+    cir: Register,
+    acc: Register,
+    ix: Register,
+    alu: ALU,
+    cmp_flag: FlagComponent,
+    address_bus: Bus,
+    inner_data_bus: Bus,
+    outer_data_bus: Bus,
+    ram_address: RAMAddress,
+    ram_data: RAM,
+    in_component: IO,
+    out_component: IO,
 ) -> dict[ComponentName, CPUComponent]:
     """Bundle every register, bus, and flag into the map that the CU will use.
 
@@ -63,6 +71,7 @@ def create_required_components_for_CU(
     }
     return components
 
+
 @dataclass
 class CU(CPUComponent):
     """Model of the Control Unit (CU) that orchestrates fetch/decode/execute timing.
@@ -72,16 +81,19 @@ class CU(CPUComponent):
     hardware pieces without extra safety checks. Whoever builds the machine uses
     ``create_required_components_for_CU`` to supply this mapping.
     """
+
     components: dict[ComponentName, CPUComponent] = field(default_factory=dict)
     name: ComponentName = ComponentName.CU
-    
+
     binary_instruction: int | None = None
     current_instruction: str | None = None
     opcode: int | None = None
     operand: int | None = None
-    
+
     current_RTNStep: RTNStep | None = None
     RTN_sequence: list[RTNStep] = field(default_factory=list)
+    RTN_sequence_index: int = 0
+    current_phase: CyclePhase = field(default_factory=lambda: CYCLE_PHASES.__next__())
 
     def __post_init__(self):
         """Guard the CU against being created without any of the names the RTN
@@ -93,15 +105,22 @@ class CU(CPUComponent):
         mapping is incomplete, which lets the rest of the CU trust that lookups
         never fail.
         """
-        missing = [name for name in ComponentName if name not in self.components]
+        missing = [
+            name
+            for name in ComponentName
+            if name not in self.components
+            and name not in [ComponentName.CU, ComponentName.OPERAND]
+        ]
         if missing:
             raise MissingComponentError(
                 f"CU initialization failed: missing {', '.join(map(str, missing))}"
             )
-
+        
+        self.enter_phase(self.current_phase)
+        
     def read(self) -> int:
         return self.operand if self.operand is not None else 0
-    
+
     def write(self, data: int) -> None:
         self.binary_instruction = data
         self.set_instruction(data)
@@ -110,10 +129,13 @@ class CU(CPUComponent):
     def compute_opcode(self, binary_instruction: int) -> int:
         """Extract the opcode from a binary instruction."""
         return binary_instruction >> 8
-    
+
     def get_instruction_definition(self, opcode: int):
         """Retrieve the instruction definition for a given opcode."""
-        return instruction_set.get(opcode)
+        definition = instruction_set.get(opcode)
+        if not definition:
+            raise ValueError(f"Invalid opcode: {opcode}")
+        return definition
 
     def set_instruction(self, instruction: int) -> None:
         """Decode the current instruction into opcode and operand parts."""
@@ -123,49 +145,77 @@ class CU(CPUComponent):
         instruction_def = self.get_instruction_definition(self.opcode)
         if instruction_def and instruction_def.long_operand:
             # Short instructions keep the operand in the CU, but long instructions need the MDR dance first.
-            self.RTN_sequence += FETCH_LONG_OPERAND_RTNSteps
+            self.RTN_sequence = FETCH_LONG_OPERAND_RTNSteps
         else:
             # No extra RTN steps needed for short instructions, but we still refresh the UI.
             pass
         self._update_display()
 
+    def print_instruction(self) -> None:
+        """Print the current instruction in mnemonic form for debugging."""
+        if self.opcode is None:
+            raise ValueError("Cannot print instruction without a valid opcode.")
+        instruction_def = self.get_instruction_definition(self.opcode)
+        mnemonic = instruction_def.mnemonic
+        if instruction_def.long_operand:
+            operand = self.components[ComponentName.MDR].read()
+        else:
+            operand = self.operand
+        print(f"{mnemonic} {operand}") # type: ignore
+
+    def enter_phase(self, phase: CyclePhase) -> None:
+        """Set the CU to a new cycle phase and reset the RTN sequence."""
+        self.RTN_sequence_index = 0
+        print(f"=== {phase} ===")
+        if phase == CyclePhase.FETCH:
+            self.RTN_sequence = FETCH_RTNSteps
+        elif phase == CyclePhase.DECODE:
+            self.RTN_sequence = DECODE_RTNSteps
+        elif phase == CyclePhase.EXECUTE:
+            if self.opcode is None:
+                raise ValueError("Cannot enter EXECUTE phase without a valid opcode.")
+            self.print_instruction()
+            instruction_def = self.get_instruction_definition(self.opcode)
+            if instruction_def:
+                if instruction_def.mnemonic == "END":
+                    self.RTN_sequence = []
+                    return
+                else:
+                    self.RTN_sequence = instruction_def.rtn_sequence
+            else:
+                self.RTN_sequence = []
+                return
+        self.current_RTNStep = self.RTN_sequence[0]
+        self._update_display()
+
+
     def step_RTNSeries(self) -> bool:
         """Advance to the next RTN step in the current instruction's sequence.
-        
+
         If the end of the sequence is reached, returns True.
         """
-        if not self.RTN_sequence:
-            # When we run out of RTN steps, signal the caller so the next phase can begin.
-            self.current_RTNStep = None
-            return True
-        if not self.current_RTNStep:
-            self.current_RTNStep = self.RTN_sequence[0]
-        current_index = self.RTN_sequence.index(self.current_RTNStep)
-        if current_index + 1 < len(self.RTN_sequence):
-            self.current_RTNStep = self.RTN_sequence[current_index + 1]
-            self._update_display()
+        if self.current_RTNStep is None:
+            raise ValueError("No current RTN step to execute.")
+        
+        self.execute_RTN_step(self.current_RTNStep)
+        self.RTN_sequence_index += 1
+        self._update_display()
+        
+        if self.RTN_sequence_index < len(self.RTN_sequence):
+            self.current_RTNStep = self.RTN_sequence[self.RTN_sequence_index]
             return False
         else:
             self.current_RTNStep = None
-            self._update_display()
             return True
-        
-    def step_cycle(self) -> None:
-        if self.step_RTNSeries():
-            # CIE describes a repeating fetch-decode-execute rhythm, so we cycle through the phases here.
-            current_phase = CYCLE_PHASES.__next__()
-            if current_phase == "fetch":
-                self.RTN_sequence = FETCH_RTNSteps
-            elif current_phase == "decode":
-                self.RTN_sequence = DECODE_RTNSteps
-            elif current_phase == "execute":
-                instruction_def = self.get_instruction_definition(self.opcode if self.opcode is not None else -1)
-                if instruction_def:
-                    # Custom execute sequences are defined per opcode so every instruction shows its own RTN.
-                    self.RTN_sequence = instruction_def.rtn_sequence
-                else:
-                    self.RTN_sequence = []
-            
+
+    def step_cycle(self) -> bool:
+        if not self.RTN_sequence:
+            # Empty RTN sequence means the program has ended or no instruction is loaded.
+            return True
+        if self.step_RTNSeries(): # step_RTNSeries executes an RTN and returns True if the sequence is complete
+            self.current_phase = CYCLE_PHASES.__next__()
+            self.enter_phase(self.current_phase)
+        return False
 
     def execute_RTN_step(self, step: RTNStep) -> None:
         """Execute a single RTN step by coordinating component actions."""
@@ -184,7 +234,7 @@ class CU(CPUComponent):
         # The CMP flag is a single-bit comparison result that RTN steps query.
         cmp_flag = self.components[ComponentName.CMP_Flag]
         return condition == cmp_flag.read()
-    
+
     def _get_dest(self, destination: ComponentName) -> CPUComponent:
         """Helper to fetch the destination component for a transfer or register operation.
         Accomodates for the fact that MOV, INC, and DEC can target registers by index.
@@ -194,7 +244,9 @@ class CU(CPUComponent):
         else:
             # Operand-targeting instructions use the operand as a register index.
             if self.operand is None:
-                raise ValueError("Operand is not set; cannot determine destination register.")
+                raise ValueError(
+                    "Operand is not set; cannot determine destination register."
+                )
             reg_index = self.operand
             match reg_index:
                 case RegisterIndex.ACC:
@@ -276,6 +328,13 @@ class CU(CPUComponent):
             value = reg_comp.read()
             reg_comp.write(value - offset)
 
+    def __repr__(self) -> str:
+        """Render a summary of the CU's current state for debugging."""
+        bin_str = f"{self.binary_instruction:04X}" if self.binary_instruction is not None else "None"
+        return (f"CU | Instruction: {self.current_instruction if self.current_instruction is not None else 'None'} | "
+                f"Opcode: {self.opcode} | Operand: {self.operand} | "
+                f"Binary Instruction: {bin_str} | "
+                f"Current RTN Step: {self.current_RTNStep if self.current_RTNStep is not None else 'None'}")
 
 if __name__ == "__main__":
     cu = CU(name=ComponentName.CU)

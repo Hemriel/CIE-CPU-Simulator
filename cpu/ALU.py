@@ -1,8 +1,8 @@
 """Arithmetic logic unit that executes ALU control signals and tracks flags."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from component import CPUComponent
-from constants import ComponentName, ControlSignal
+from constants import ComponentName, ControlSignal, WORD_SIZE
 
 @dataclass
 class FlagComponent(CPUComponent):
@@ -19,6 +19,8 @@ class FlagComponent(CPUComponent):
         self.value = value
         self._update_display()
 
+    def __repr__(self) -> str:
+        return f"{'SET' if self.value else 'CLEAR'}"
     
 @dataclass
 class ALU(CPUComponent):
@@ -31,12 +33,12 @@ class ALU(CPUComponent):
         result: stored result to visualize the pending write back.
         flag_component: optional receiver that updates the status/register flags.
     """
-
+    name: ComponentName = ComponentName.ALU
     control: ControlSignal | None = None
     operand_a: int = 0
     operand_b: int = 0
     result: int = 0
-    flag_component: FlagComponent = FlagComponent()
+    flag_component: FlagComponent = field(default_factory=FlagComponent)
 
     def read(self) -> int:
         return self.result
@@ -78,6 +80,10 @@ class ALU(CPUComponent):
 
     def _set_result(self, result: int) -> None:
         """Store the computed result and refresh the UI display."""
-        self.result = result % (1 << 16)  # Assuming 16-bit ALU width.
+        self.result = result % (1 << WORD_SIZE)  # Assuming WORD_SIZE-bit ALU width.
         self._update_display()
 
+    def __repr__(self) -> str:
+        return (f"Control: {self.control} | "
+                f"Operand A: {self.operand_a:04X} | Operand B: {self.operand_b:04X} | "
+                f"Result: {self.result:04X}")

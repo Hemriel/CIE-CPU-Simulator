@@ -24,20 +24,38 @@ class SimpleTransferStep(RTNStep):
     source: ComponentName
     destination: ComponentName
 
+    def __repr__(self) -> str:
+        return f"{self.destination} <- {self.source}"
+
 @dataclass
 class ConditionalTransferStep(SimpleTransferStep):
     condition: bool = True
     """A simple transfer that only occurs if the cmp flag matches the condition."""
+
+    def __repr__(self) -> str:
+        cond_str = "if E" if self.condition else "if not E"
+        return f"{self.destination} <- {self.source} {cond_str}"
 
 @dataclass
 class MemoryAccessStep(RTNStep):
     is_address: bool = True
     control: ControlSignal = ControlSignal.READ
 
+    def __repr__(self) -> str:
+        if self.is_address:
+            return f"RAM address <- MAR"
+        elif self.control == ControlSignal.READ:
+            return f"MDR <- RAM data"
+        else:
+            return f"RAM data <- MDR"
+
 @dataclass
 class ALUOperationStep(RTNStep):
     source: ComponentName
     control: ControlSignal
+
+    def __repr__(self) -> str:
+        return f"ACC {self.control} {self.source}"
 
 @dataclass
 class RegOperationStep(RTNStep):
@@ -45,6 +63,12 @@ class RegOperationStep(RTNStep):
     control: ControlSignal
     source: ComponentName | None = None
     """A register operation step, such as INC or DEC, possibly involving a source register."""
+
+    def __repr__(self) -> str:
+        if self.source:
+            return f"{self.destination} {self.control} {self.source}"
+        else:
+            return f"{self.destination} {self.control}"
 
 direct_addressing_RTNSteps = [
     SimpleTransferStep(source=ComponentName.MDR, destination=ComponentName.MAR),
@@ -161,6 +185,38 @@ STO = InstructionDefinition(
     description="Store value from accumulator into memory",
     rtn_sequence=[
         SimpleTransferStep(source=ComponentName.MDR, destination=ComponentName.MAR),
+        SimpleTransferStep(source=ComponentName.ACC, destination=ComponentName.MDR),
+        MemoryAccessStep(),
+        MemoryAccessStep(is_address=False, control=ControlSignal.WRITE),
+    ],
+)
+
+STI = InstructionDefinition(
+    mnemonic="STI",
+    opcode=30,
+    addressing_mode=AddressingMode.INDIRECT,
+    description="Store ACC into memory address retrieved through operand pointer",
+    rtn_sequence=[
+        SimpleTransferStep(source=ComponentName.MDR, destination=ComponentName.MAR),
+        MemoryAccessStep(),
+        MemoryAccessStep(is_address=False),
+        SimpleTransferStep(source=ComponentName.MDR, destination=ComponentName.MAR),
+        SimpleTransferStep(source=ComponentName.ACC, destination=ComponentName.MDR),
+        MemoryAccessStep(),
+        MemoryAccessStep(is_address=False, control=ControlSignal.WRITE),
+    ],
+)
+
+STX = InstructionDefinition(
+    mnemonic="STX",
+    opcode=31,
+    addressing_mode=AddressingMode.INDEXED,
+    description="Store ACC into memory at address computed by IX plus operand",
+    rtn_sequence=[
+        SimpleTransferStep(source=ComponentName.MDR, destination=ComponentName.MAR),
+        RegOperationStep(
+            source=ComponentName.IX, destination=ComponentName.MAR, control=ControlSignal.INC
+        ),
         SimpleTransferStep(source=ComponentName.ACC, destination=ComponentName.MDR),
         MemoryAccessStep(),
         MemoryAccessStep(is_address=False, control=ControlSignal.WRITE),
@@ -528,6 +584,8 @@ instruction_set = {
     OR2.opcode: OR2,
     LSL.opcode: LSL,
     LSR.opcode: LSR,
+    STI.opcode: STI,
+    STX.opcode: STX,
 }
 
 FETCH_RTNSteps: list[RTNStep] = [
@@ -543,6 +601,7 @@ DECODE_RTNSteps: list[RTNStep] = [
 ]
 
 FETCH_LONG_OPERAND_RTNSteps: list[RTNStep] = [
+    SimpleTransferStep(source=ComponentName.CIR, destination=ComponentName.CU),
     SimpleTransferStep(source=ComponentName.PC, destination=ComponentName.MAR),
     MemoryAccessStep(),
     MemoryAccessStep(is_address=False),

@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from component import CPUComponent
+from constants import ComponentName
 
 
 @dataclass
@@ -12,7 +13,7 @@ class IO(CPUComponent):
         contents: The pending characters represented as an ASCII string so IN/OUT match
             the CIE requirement to transfer ASCII values one character at a time.
     """
-
+    name: ComponentName
     contents: str = ""
 
     def write(self, data: int) -> None:
@@ -30,3 +31,6 @@ class IO(CPUComponent):
             self._update_display()
             return data
         return None
+
+    def __repr__(self) -> str:
+        return f" IO | Contents: '{self.contents}'"

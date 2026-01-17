@@ -568,36 +568,38 @@ Otherwise:
 
 | Opcode | Mnemonic | Operand | Description |
 |--------|----------|---------|-------------|
-| 0 | LDM | #n | Immediate addressing. Load the number n to ACC |
-| 1 | LDD | `<address>` | Direct addressing. Load the contents of the location at the given address to ACC |
-| 2 | LDI | `<address>` | Indirect addressing. The address to be used is at the given address. Load the contents of this second address to ACC |
-| 3 | LDX | `<address>` | Indexed addressing. Form the address from `<address>` + the contents of the index register. Copy the contents of this calculated address to ACC |
-| 4 | LDR | #n | Immediate addressing. Load the number n to IX |
-| 5 | MOV | `<register>` | Move the contents of the accumulator to the given register (IX) |
-| 6 | STO | `<address>` | Store the contents of ACC at the given address |
-| 7 | ADD | `<address>` | Add the contents of the given address to the ACC |
-| 8 | ADD | #n/Bn/&n | Add the number n to the ACC |
-| 9 | SUB | `<address>` | Subtract the contents of the given address from the ACC |
-| 10 | SUB | #n/Bn/&n | Subtract the number n from the ACC |
-| 11 | INC | `<register>` | Add 1 to the contents of the register (ACC or IX) |
-| 12 | DEC | `<register>` | Subtract 1 from the contents of the register (ACC or IX) |
-| 13 | JMP | `<address>` | Jump to the given address |
-| 14 | CMP | `<address>` | Compare the contents of ACC with the contents of `<address>` |
-| 15 | CMP | #n | Compare the contents of ACC with number n |
-| 16 | CMI | `<address>` | Indirect addressing. The address to be used is at the given address. Compare the contents of ACC with the contents of this second address |
-| 17 | JPE | `<address>` | Following a compare instruction, jump to `<address>` if the compare was True |
-| 18 | JPN | `<address>` | Following a compare instruction, jump to `<address>` if the compare was False |
-| 19 | IN | (none) | Key in a character and store its ASCII value in ACC |
-| 20 | OUT | (none) | Output to the screen the character whose ASCII value is stored in ACC |
-| 21 | END | (none) | Return control to the operating system |
-| 22 | AND | #n/Bn/&n | Bitwise AND operation of the contents of ACC with the operand |
-| 23 | AND | `<address>` | Bitwise AND operation of the contents of ACC with the contents of `<address>` |
-| 24 | XOR | #n/Bn/&n | Bitwise XOR operation of the contents of ACC with the operand |
-| 25 | XOR | `<address>` | Bitwise XOR operation of the contents of ACC with the contents of `<address>` |
-| 26 | OR | #n/Bn/&n | Bitwise OR operation of the contents of ACC with the operand |
-| 27 | OR | `<address>` | Bitwise OR operation of the contents of ACC with the contents of `<address>` |
-| 28 | LSL | #n | Bits in ACC are shifted logically n places to the left. Zeros are introduced on the right hand end |
-| 29 | LSR | #n | Bits in ACC are shifted logically n places to the right. Zeros are introduced on the left hand end |
+| 00 | LDM | #n | Immediate addressing. Load the number n to ACC |
+| 01 | LDD | `<address>` | Direct addressing. Load the contents of the location at the given address to ACC |
+| 02 | LDI | `<address>` | Indirect addressing. The address to be used is at the given address. Load the contents of this second address to ACC |
+| 03 | LDX | `<address>` | Indexed addressing. Form the address from `<address>` + the contents of the index register. Copy the contents of this calculated address to ACC |
+| 04 | LDR | #n | Immediate addressing. Load the number n to IX |
+| 05 | MOV | `<register>` | Move the contents of the accumulator to the given register (IX) |
+| 06 | STO | `<address>` | Store the contents of ACC at the given address |
+| 07 | ADD | `<address>` | Add the contents of the given address to the ACC |
+| 08 | ADD | #n/Bn/&n | Add the number n to the ACC |
+| 09 | SUB | `<address>` | Subtract the contents of the given address from the ACC |
+| 0A | SUB | #n/Bn/&n | Subtract the number n from the ACC |
+| 0B | INC | `<register>` | Add 1 to the contents of the register (ACC or IX) |
+| 0C | DEC | `<register>` | Subtract 1 from the contents of the register (ACC or IX) |
+| 0D | JMP | `<address>` | Jump to the given address |
+| 0E | CMP | `<address>` | Compare the contents of ACC with the contents of `<address>` |
+| 0F | CMP | #n | Compare the contents of ACC with number n |
+| 10 | CMI | `<address>` | Indirect addressing. The address to be used is at the given address. Compare the contents of ACC with the contents of this second address |
+| 11 | JPE | `<address>` | Following a compare instruction, jump to `<address>` if the compare was True |
+| 12 | JPN | `<address>` | Following a compare instruction, jump to `<address>` if the compare was False |
+| 13 | IN | (none) | Key in a character and store its ASCII value in ACC |
+| 14 | OUT | (none) | Output to the screen the character whose ASCII value is stored in ACC |
+| 15 | END | (none) | Return control to the operating system |
+| 16 | AND | #n/Bn/&n | Bitwise AND operation of the contents of ACC with the operand |
+| 17 | AND | `<address>` | Bitwise AND operation of the contents of ACC with the contents of `<address>` |
+| 18 | XOR | #n/Bn/&n | Bitwise XOR operation of the contents of ACC with the operand |
+| 19 | XOR | `<address>` | Bitwise XOR operation of the contents of ACC with the contents of `<address>` |
+| 1A | OR | #n/Bn/&n | Bitwise OR operation of the contents of ACC with the operand |
+| 1B | OR | `<address>` | Bitwise OR operation of the contents of ACC with the contents of `<address>` |
+| 1C | LSL | #n | Bits in ACC are shifted logically n places to the left. Zeros are introduced on the right hand end |
+| 1D | LSR | #n | Bits in ACC are shifted logically n places to the right. Zeros are introduced on the left hand end |
+| 1E | STI | #n/Bn/&m | (added) indirect variant of STO |
+| 1F | STX | #n/Bn/&m | (added) indexed variant of STO |
 
 `<address>` can be an absolute or symbolic address\
 `#` denotes a denary number, e.g. #123\
