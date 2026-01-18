@@ -1,44 +1,53 @@
+import asyncio
+from pathlib import Path
 
-from time import sleep
+from textual.app import App
+
+from cpu.cpu import CPU
+from interface.CPUDisplayer import CPUDisplay
 
 
-def cpu_test(machine_code: list[int] | None = None):
-    from cpu.cpu import CPU
-    cpu = CPU()
-    print("CPU initialized with components:")
-    for name, component in cpu.components.items():
-        print(f"{name}: {component}")
-    if machine_code is None:
-        with open("fibo.bin", "r") as f:
-            program = [int(line.strip(), 16) for line in f.readlines()]
-    else:
-        program = machine_code
+def load_fib2_program(cpu: CPU, source: Path) -> None:
+    """Populate RAM with the Fibonacci program stored in ``source``."""
+
+    with source.open("r") as handle:
+        lines = [line.strip() for line in handle.readlines() if line.strip()]
+    program = [int(line, 16) for line in lines]
     cpu.load_program(program)
-    print("Program loaded into RAM.")
-    ram_contents = [cpu.ram.memory[addr] for addr in range(len(program))]
-    print("RAM Contents:")
-    for addr, word in enumerate(ram_contents):
-        print(f"Address {addr:04X}: {word:04X}")
-    print(cpu)
-    while not cpu.step():
-        print(cpu)
-    print("Program execution finished.")
-    print("fibonacci results:")
-    for i in range(20):
-        print(f"fib({i}) = {cpu.ram.memory.get(i+200)}")
 
-def assembler_test():
-    from assembler.assembler import assemble
-    with open("fibo2.txt", "r") as f:
-        source_code = f.read()
-    machine_code = assemble(source_code.splitlines())
-    with open("fibo2.bin", "w") as f:
-        f.write("\n".join(f"{word:04X}" for word in machine_code))
-    print("Assembled Machine Code:")
-    for addr, word in enumerate(machine_code):
-        print(f"Address {addr:04X}: {word:04X}")
-    return machine_code
+
+class CPUInterfaceApp(App):
+    """Minimal Textual app that hooks the CPU display and drives a simple clock."""
+
+    CSS_PATH = None
+
+    def __init__(self, cpu: CPU) -> None:
+        super().__init__()
+        self.cpu = cpu
+        self.cpu_display = CPUDisplay(cpu)
+
+    def compose(self):
+        yield self.cpu_display
+
+    async def on_mount(self) -> None:
+        self._cpu_task = asyncio.create_task(self._run_cpu_loop())
+
+    async def _run_cpu_loop(self) -> None:
+        while True:
+            finished = self.cpu.step()
+            self.cpu_display.refresh_all()
+            if finished:
+                break
+            await asyncio.sleep(0.25)
+
+
+def main() -> None:
+    cpu = CPU()
+    program_path = Path(__file__).parent / "examples" / "fibo2.bin"
+    load_fib2_program(cpu, program_path)
+    app = CPUInterfaceApp(cpu)
+    app.run()
+
 
 if __name__ == "__main__":
-    machine_code = assembler_test()
-    cpu_test(machine_code)
+    main()

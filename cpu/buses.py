@@ -21,6 +21,7 @@ class Bus(CPUComponent):
     name: ComponentName
     sources: list[EndPoint] = field(default_factory=list)
     sink: EndPoint | None = None
+    active: bool = False
     value: int = 0
 
     def read(self) -> int:
@@ -30,6 +31,11 @@ class Bus(CPUComponent):
     def write(self, data: int) -> None:
         """Update the bus value for display purposes and refresh the UI."""
         self.value = data % (1 << WORD_SIZE)
+        self._update_display()
+
+    def set_active(self, active: bool) -> None:
+        """Set whether the bus is currently active for highlighting purposes."""
+        self.active = active
         self._update_display()
 
     def __repr__(self) -> str:

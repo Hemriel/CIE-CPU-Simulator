@@ -49,7 +49,7 @@ class RAM(CPUComponent):
         """Read data from the specified RAM address."""
         address = self.address_comp.read()
         self.data = self.memory.get(address)
-        # self._update_display()
+        self._update_display()
         return self.data
 
     def write(self, data: int) -> None:
@@ -58,7 +58,7 @@ class RAM(CPUComponent):
         self.memory[address] = data % (
             1 << WORD_SIZE
         )  # Assuming WORD_SIZE-bit RAM words
-        # self._update_display()
+        self._update_display()
 
     def __repr__(self) -> str:
         return f"Size: {len(self.memory)} words"
