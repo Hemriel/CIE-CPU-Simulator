@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 from typing import Protocol
-from constants import ComponentName
+from common.constants import ComponentName
 
 
 class Displayer(Protocol):
@@ -10,8 +10,10 @@ class Displayer(Protocol):
 
     def update_display(self) -> None: ...
 
-class TerminalDisplayer():
+
+class TerminalDisplayer:
     """A displayer that outputs to the terminal for testing purposes."""
+
     def __init__(self, component) -> None:
         self.component = component
 
@@ -22,6 +24,7 @@ class TerminalDisplayer():
 
     def __repr__(self) -> str:
         return "TerminalDisplayer"
+
 
 @dataclass
 class CPUComponent(Protocol):
@@ -45,7 +48,7 @@ class CPUComponent(Protocol):
     def read(self) -> int:
         """Read data from the component. To be implemented by subclasses."""
         raise NotImplementedError("Subclasses must implement the read method.")
-    
+
     def write(self, data: int) -> None:
         """Write data to the component. To be implemented by subclasses."""
         raise NotImplementedError("Subclasses must implement the write method.")

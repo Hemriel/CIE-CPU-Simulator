@@ -1,0 +1,66 @@
+; variable declaration
+PREV: #0 ; 2C
+CURR: #1 ; 2D
+TMP: #0 ; 2E
+COUNTER: #18 ; 2F
+
+; IX setup
+LDR &C8             ; 0400 ; 0
+                    ; 00C8 ; 1
+
+; saving fib(0)
+LDD PREV            ; 0100 ; 2
+                    ; PREV <- 002C ; 3
+STX #0              ; 1F00 ; 4
+                    ; 0000 ; 5
+INC #1              ; 0B01 ; 6
+
+; saving fib(1)
+LDD CURR            ; 0100 ; 7
+                    ; CURR <- 002D; 8
+STX #0              ; 1F00 ; 9
+                    ; 0000 ; A
+INC #1              ; 0B01 ; B
+
+; while counter != 0
+LOOP:LDD COUNTER    ; 0100 ; C
+                    ; COUNTER <- 002F ; D
+CMP #0              ; 0F00 ; E
+                    ; 0000 ; F
+JPE END             ; 1100 ; 10
+                    ; END <- 002B ; 11
+; do
+
+; compute next fib and store it
+LDD PREV            ; 0100 ; 12
+                    ; PREV  <- 002C ; 13
+ADD CURR            ; 0700 ; 14
+                    ; CURR <- 002D ; 15
+STO TMP             ; 0600 ; 16
+                    ; TMP <- 002E ; 17
+STX #0              ; 1F00 ; 18
+                    ; 0000 ; 19
+INC #1              ; 0B01 ; 1A
+
+; shift temp values
+LDD CURR            ; 0100 ; 1B
+                    ; CURR <- 002D ; 1C
+STO PREV            ; 0600 ; 1D
+                    ; PREV <- 002C ; 1E
+LDD TMP             ; 0100 ; 1F
+                    ; TMP <- 002E ; 20
+STO CURR            ; 0600 ; 21
+                    ; CURR <- 002D ; 22
+
+; update counter
+LDD COUNTER         ; 0100 ; 23
+                    ; COUNTER <- 002F ; 24
+SUB #1              ; 0A00 ; 25
+                    ; 0001 ; 26
+STO COUNTER         ; 0600 ; 27
+                    ; COUNTER <- 002F; 28
+JMP LOOP            ; 0D00 ; 29
+                    ; LOOP <- 000C ; 2A
+; endwhile
+
+END: END            ; 1500 ; 2B

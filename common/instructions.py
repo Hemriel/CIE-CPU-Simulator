@@ -11,7 +11,7 @@ Design notes:
 """
 
 from dataclasses import dataclass
-from constants import AddressingMode, ControlSignal, ComponentName, RTNTypes
+from common.constants import AddressingMode, ControlSignal, ComponentName
 
 
 @dataclass
@@ -113,6 +113,14 @@ class InstructionDefinition:
 
 instruction_set: dict[int, InstructionDefinition] = {}
 """A global registry of instruction definitions keyed by opcode."""
+
+def get_instruction_by_mnemonic(mnemonic: str) -> list[InstructionDefinition]:
+    """Retrieve all instruction definitions matching the given mnemonic."""
+    return [
+        instr_def
+        for instr_def in instruction_set.values()
+        if instr_def.mnemonic == mnemonic
+    ]
 
 LDM = InstructionDefinition(
     mnemonic="LDM",
@@ -400,7 +408,7 @@ IN = InstructionDefinition(
     mnemonic="IN",
     opcode=19,
     description="Input value from input queue into accumulator",
-    addressing_mode=None,
+    addressing_mode=AddressingMode.NONE,
     long_operand= False,
     rtn_sequence=[
         SimpleTransferStep(source=ComponentName.IN, destination=ComponentName.ACC),
@@ -411,7 +419,7 @@ OUT = InstructionDefinition(
     mnemonic="OUT",
     opcode=20,
     description="Output value from accumulator to output queue",
-    addressing_mode=None,
+    addressing_mode=AddressingMode.NONE,
     long_operand= False,
     rtn_sequence=[
         SimpleTransferStep(source=ComponentName.ACC, destination=ComponentName.OUT),
@@ -422,7 +430,7 @@ END = InstructionDefinition(
     mnemonic="END",
     opcode=21,
     description="Halt program execution",
-    addressing_mode=None,
+    addressing_mode=AddressingMode.NONE,
     long_operand= False,
     rtn_sequence=[],
 )

@@ -1,8 +1,8 @@
 """I/O component that feeds ASCII characters into and out of the simulated CPU."""
 
 from dataclasses import dataclass
-from component import CPUComponent
-from constants import ComponentName
+from cpu.component import CPUComponent
+from common.constants import ComponentName
 
 
 @dataclass
@@ -13,6 +13,7 @@ class IO(CPUComponent):
         contents: The pending characters represented as an ASCII string so IN/OUT match
             the CIE requirement to transfer ASCII values one character at a time.
     """
+
     name: ComponentName
     contents: str = ""
 

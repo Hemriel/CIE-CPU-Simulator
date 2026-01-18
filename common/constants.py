@@ -13,6 +13,10 @@ class MissingComponentError(Exception):
     """Raised when a CPU component is missing required sub-components."""
     ...
 
+class AssemblingError(Exception):
+    """Raised when an error occurs during assembly of source code."""
+    ...
+
 
 class AddressingMode(StrEnum):
     """Defines every addressing mode that the CIE spec calls out."""
@@ -22,6 +26,7 @@ class AddressingMode(StrEnum):
     INDIRECT = "indirect"
     REGISTER = "register"
     INDEXED = "indexed"
+    NONE = "none"  # for instructions without operands
 
 
 class ComponentName(StrEnum):
@@ -45,15 +50,15 @@ class ComponentName(StrEnum):
     OUTER_DATA_BUS = "OUTER_DATA_BUS"
     ADDRESS_BUS = "ADDRESS_BUS"
 
-class RegisterIndex(IntEnum):
-    """Numeric indices for general-purpose registers. Used to encode/decode register operands in MOV, INC, DEC."""
-
-    ACC = 0
-    IX = 1
-    PC = 2
-    MAR = 3
-    MDR = 4
-    CIR = 5
+RegisterIndex : dict[ComponentName, int] = {
+    ComponentName.ACC: 0,
+    ComponentName.IX: 1,
+    ComponentName.PC: 2,
+    ComponentName.MAR: 3,
+    ComponentName.MDR: 4,
+    ComponentName.CIR: 5,
+}
+"""Numeric indices for general-purpose registers. Used to encode/decode register operands in MOV, INC, DEC."""
 
 
 class DisplayMode(StrEnum):

@@ -1,19 +1,21 @@
 """Arithmetic logic unit that executes ALU control signals and tracks flags."""
 
 from dataclasses import dataclass, field
-from component import CPUComponent
-from constants import ComponentName, ControlSignal, WORD_SIZE
+from cpu.component import CPUComponent
+from common.constants import ComponentName, ControlSignal, WORD_SIZE
+
 
 @dataclass
 class FlagComponent(CPUComponent):
     """A component that can update status flags based on an ALU result."""
+
     name: ComponentName = ComponentName.CMP_Flag
     value = False
 
     def read(self) -> bool:
         """Read the current flag value."""
         return self.value
-    
+
     def write(self, value: bool) -> None:
         """Write a new flag value."""
         self.value = value
@@ -21,7 +23,8 @@ class FlagComponent(CPUComponent):
 
     def __repr__(self) -> str:
         return f"{'SET' if self.value else 'CLEAR'}"
-    
+
+
 @dataclass
 class ALU(CPUComponent):
     """Model of the ALU following the CIE RTN description of arithmetic and logic ops.
@@ -33,6 +36,7 @@ class ALU(CPUComponent):
         result: stored result to visualize the pending write back.
         flag_component: optional receiver that updates the status/register flags.
     """
+
     name: ComponentName = ComponentName.ALU
     control: ControlSignal | None = None
     operand_a: int = 0
@@ -42,7 +46,7 @@ class ALU(CPUComponent):
 
     def read(self) -> int:
         return self.result
-    
+
     def write(self, data: int) -> None:
         raise ValueError("ALU does not support direct writes.")
 
@@ -61,7 +65,7 @@ class ALU(CPUComponent):
 
     def compute(self) -> None:
         """Execute the selected ControlSignal, store the result, and update flags."""
-            # Every ControlSignal maps to a deterministic arithmetic or logic function.
+        # Every ControlSignal maps to a deterministic arithmetic or logic function.
         if self.control == ControlSignal.ADD:
             self._set_result(self.operand_a + self.operand_b)
         elif self.control == ControlSignal.SUB:
@@ -73,7 +77,7 @@ class ALU(CPUComponent):
         elif self.control == ControlSignal.XOR:
             self._set_result(self.operand_a ^ self.operand_b)
         elif self.control == ControlSignal.CMP:
-            compare = (self.operand_a == self.operand_b)
+            compare = self.operand_a == self.operand_b
             self.flag_component.write(compare)
         else:
             self._set_result(0)  # Default fallback for unsupported operations.
@@ -84,6 +88,8 @@ class ALU(CPUComponent):
         self._update_display()
 
     def __repr__(self) -> str:
-        return (f"Control: {self.control} | "
-                f"Operand A: {self.operand_a:04X} | Operand B: {self.operand_b:04X} | "
-                f"Result: {self.result:04X}")
+        return (
+            f"Control: {self.control} | "
+            f"Operand A: {self.operand_a:04X} | Operand B: {self.operand_b:04X} | "
+            f"Result: {self.result:04X}"
+        )

@@ -2,8 +2,8 @@
 
 from dataclasses import dataclass, field
 from typing import Protocol
-from component import CPUComponent
-from constants import ComponentName, WORD_SIZE
+from cpu.component import CPUComponent
+from common.constants import ComponentName, WORD_SIZE
 
 
 class EndPoint(Protocol):
@@ -17,10 +17,11 @@ class EndPoint(Protocol):
 @dataclass
 class Bus(CPUComponent):
     """A visual bus that connects a source list to a sink purely for display purposes."""
+
     name: ComponentName
     sources: list[EndPoint] = field(default_factory=list)
     sink: EndPoint | None = None
-    value : int = 0
+    value: int = 0
 
     def read(self) -> int:
         """Buses should not be read from, but this will return the current value."""

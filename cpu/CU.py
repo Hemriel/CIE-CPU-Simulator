@@ -1,8 +1,8 @@
 """Control Unit (CU) module for the CPU simulator."""
 
 from dataclasses import dataclass, field
-from component import CPUComponent
-from constants import (
+from cpu.component import CPUComponent
+from common.constants import (
     ComponentName,
     ControlSignal,
     CYCLE_PHASES,
@@ -10,12 +10,12 @@ from constants import (
     MissingComponentError,
     RegisterIndex,
 )
-from ALU import ALU, FlagComponent
-from register import Register
-from buses import Bus
-from RAM import RAM, RAMAddress
-from cpu_io import IO
-from instructions import (
+from cpu.ALU import ALU, FlagComponent
+from cpu.register import Register
+from cpu.buses import Bus
+from cpu.RAM import RAM, RAMAddress
+from cpu.cpu_io import IO
+from common.instructions import (
     RTNStep,
     instruction_set,
     SimpleTransferStep,
@@ -115,9 +115,9 @@ class CU(CPUComponent):
             raise MissingComponentError(
                 f"CU initialization failed: missing {', '.join(map(str, missing))}"
             )
-        
+
         self.enter_phase(self.current_phase)
-        
+
     def read(self) -> int:
         return self.operand if self.operand is not None else 0
 
@@ -161,7 +161,7 @@ class CU(CPUComponent):
             operand = self.components[ComponentName.MDR].read()
         else:
             operand = self.operand
-        print(f"{mnemonic} {operand}") # type: ignore
+        print(f"{mnemonic} {operand}")  # type: ignore
 
     def enter_phase(self, phase: CyclePhase) -> None:
         """Set the CU to a new cycle phase and reset the RTN sequence."""
@@ -188,7 +188,6 @@ class CU(CPUComponent):
         self.current_RTNStep = self.RTN_sequence[0]
         self._update_display()
 
-
     def step_RTNSeries(self) -> bool:
         """Advance to the next RTN step in the current instruction's sequence.
 
@@ -196,11 +195,11 @@ class CU(CPUComponent):
         """
         if self.current_RTNStep is None:
             raise ValueError("No current RTN step to execute.")
-        
+
         self.execute_RTN_step(self.current_RTNStep)
         self.RTN_sequence_index += 1
         self._update_display()
-        
+
         if self.RTN_sequence_index < len(self.RTN_sequence):
             self.current_RTNStep = self.RTN_sequence[self.RTN_sequence_index]
             return False
@@ -212,7 +211,9 @@ class CU(CPUComponent):
         if not self.RTN_sequence:
             # Empty RTN sequence means the program has ended or no instruction is loaded.
             return True
-        if self.step_RTNSeries(): # step_RTNSeries executes an RTN and returns True if the sequence is complete
+        if (
+            self.step_RTNSeries()
+        ):  # step_RTNSeries executes an RTN and returns True if the sequence is complete
             self.current_phase = CYCLE_PHASES.__next__()
             self.enter_phase(self.current_phase)
         return False
@@ -248,22 +249,14 @@ class CU(CPUComponent):
                     "Operand is not set; cannot determine destination register."
                 )
             reg_index = self.operand
-            match reg_index:
-                case RegisterIndex.ACC:
-                    return self.components[ComponentName.ACC]
-                case RegisterIndex.IX:
-                    return self.components[ComponentName.IX]
-                case RegisterIndex.PC:
-                    return self.components[ComponentName.PC]
-                case RegisterIndex.MAR:
-                    return self.components[ComponentName.MAR]
-                case RegisterIndex.MDR:
-                    return self.components[ComponentName.MDR]
-                case RegisterIndex.CIR:
-                    return self.components[ComponentName.CIR]
-                case _:
-                    raise ValueError(f"Invalid register index in operand: {reg_index}")
-
+            for key, value in RegisterIndex.items():
+                if value == reg_index:
+                    destination = key
+                    break
+            if not destination:
+                raise ValueError(f"Invalid register index in operand: {reg_index}")
+            return self.components[destination]
+        
     def _handle_simple_transfer(self, step: SimpleTransferStep) -> None:
         """Move data along the inner data bus exactly as RTN lists."""
         source_comp = self.components[step.source]
@@ -330,11 +323,18 @@ class CU(CPUComponent):
 
     def __repr__(self) -> str:
         """Render a summary of the CU's current state for debugging."""
-        bin_str = f"{self.binary_instruction:04X}" if self.binary_instruction is not None else "None"
-        return (f"CU | Instruction: {self.current_instruction if self.current_instruction is not None else 'None'} | "
-                f"Opcode: {self.opcode} | Operand: {self.operand} | "
-                f"Binary Instruction: {bin_str} | "
-                f"Current RTN Step: {self.current_RTNStep if self.current_RTNStep is not None else 'None'}")
+        bin_str = (
+            f"{self.binary_instruction:04X}"
+            if self.binary_instruction is not None
+            else "None"
+        )
+        return (
+            f"CU | Instruction: {self.current_instruction if self.current_instruction is not None else 'None'} | "
+            f"Opcode: {self.opcode} | Operand: {self.operand} | "
+            f"Binary Instruction: {bin_str} | "
+            f"Current RTN Step: {self.current_RTNStep if self.current_RTNStep is not None else 'None'}"
+        )
+
 
 if __name__ == "__main__":
     cu = CU(name=ComponentName.CU)
