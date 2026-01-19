@@ -19,7 +19,6 @@ class TerminalDisplayer:
 
     def update_display(self) -> None:
         """Automatically fetches properties and prints them to the terminal."""
-        return
         print(self.component)
 
     def __repr__(self) -> str:

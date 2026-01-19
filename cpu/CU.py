@@ -118,6 +118,21 @@ class CU(CPUComponent):
 
         self.enter_phase(self.current_phase)
 
+    def stringify_operand(self) -> str:
+        # logic changes depending on whether opcode is set
+        if self.opcode is None:
+            return "None"
+        # If the current instruction uses a long operand, displays "long" instead of the raw value.
+        instruction_def = self.get_instruction_definition(self.opcode)
+        if instruction_def and instruction_def.long_operand:
+            return "long"
+        # if the current instruction uses a RegisterIndex as operand, display the register name
+        for key, value in RegisterIndex.items():
+            if value == self.operand:
+                return key.name
+        # Otherwise, just return the raw operand value.
+        return str(self.operand)
+        
     def read(self) -> int:
         return self.operand if self.operand is not None else 0
 

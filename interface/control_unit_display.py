@@ -3,12 +3,13 @@ from typing import Any
 from rich.panel import Panel
 from rich.text import Text
 from textual.widgets import Static
+from cpu.cpu import CPU
 
 
 class ControlUnitDisplay(Static):
     """Minimal CU widget that mirrors the current instruction and RTN step."""
 
-    def __init__(self, cpu: Any) -> None:
+    def __init__(self, cpu: CPU) -> None:
         super().__init__()
         self.cpu = cpu
         self.update_display()
@@ -16,7 +17,7 @@ class ControlUnitDisplay(Static):
     def update_display(self) -> None:
         cu = self.cpu.cu
         instruction = cu.current_instruction or "None"
-        operand = cu.operand if cu.operand is not None else "-"
+        operand = cu.stringify_operand()
         rtn_step = cu.current_RTNStep or "Idle"
         phase = getattr(cu.current_phase, "name", cu.current_phase)
         text = Text(
