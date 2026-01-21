@@ -2,6 +2,7 @@ import asyncio
 from pathlib import Path
 
 from textual.app import App
+from textual.widgets import Footer, Header
 
 from cpu.cpu import CPU
 from interface.CPUDisplayer import CPUDisplay
@@ -27,7 +28,9 @@ class CPUInterfaceApp(App):
         self.cpu_display = CPUDisplay(cpu)
 
     def compose(self):
+        yield Header()
         yield self.cpu_display
+        yield Footer()
 
     async def on_mount(self) -> None:
         self._cpu_task = asyncio.create_task(self._run_cpu_loop())
@@ -35,7 +38,7 @@ class CPUInterfaceApp(App):
     async def _run_cpu_loop(self) -> None:
         while True:
             finished = self.cpu.step()
-            self.cpu_display.refresh_all()
+            # self.cpu_display.refresh_all()
             if finished:
                 break
             await asyncio.sleep(0.25)

@@ -1,6 +1,6 @@
 # CPU-wide display built by composing individual widgets for each hardware component.
 
-from typing import Any
+from cpu.cpu import CPU
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
@@ -11,17 +11,20 @@ from interface.control_unit_display import ControlUnitDisplay
 from interface.internal_bus_display import InternalBusDisplay
 from interface.outer_bus_display import OuterBusDisplay
 from interface.register_display import RegisterDisplay
+from interface.IO_display import IODisplay 
 from interface.ram_display import RAMAddressDisplay, RAMDataDisplay
 
 
 class CPUDisplay(Widget):
 	"""Layout the CPU interface widgets in their rough spatial arrangement."""
 
-	def __init__(self, cpu: Any) -> None:
+	def __init__(self, cpu: CPU) -> None:
 		super().__init__()
 		self.cpu = cpu
-		self.control_display = ControlUnitDisplay(cpu)
-		self.alu_display = ALUDisplay(cpu)
+		self.control_display = ControlUnitDisplay(cpu.cu)
+		self.input_display = IODisplay(cpu.io_in, "Input Port")
+		self.output_display = IODisplay(cpu.io_out, "Output Port")
+		self.alu_display = ALUDisplay(cpu.alu)
 		self.inner_bus_display = InternalBusDisplay(cpu.inner_data_bus)
 		self.address_bus_display = OuterBusDisplay(
 			cpu.address_bus, title="Address Bus", color="gold1"
@@ -37,10 +40,12 @@ class CPUDisplay(Widget):
 			RegisterDisplay(cpu.acc, "ACC"),
 			RegisterDisplay(cpu.ix, "IX"),
 		]
-		self.ram_address_display = RAMAddressDisplay(cpu)
-		self.ram_data_display = RAMDataDisplay(cpu)
+		self.ram_address_display = RAMAddressDisplay(cpu.ram)
+		self.ram_data_display = RAMDataDisplay(cpu.ram)
 		self._displayers = [
 			self.control_display,
+			self.input_display,
+			self.output_display,
 			self.alu_display,
 			self.inner_bus_display,
 			self.address_bus_display,
@@ -53,6 +58,8 @@ class CPUDisplay(Widget):
 
 	def _wire_components(self) -> None:
 		self.cpu.cu.displayer = self.control_display
+		self.cpu.io_in.displayer = self.input_display
+		self.cpu.io_out.displayer = self.output_display
 		self.cpu.alu.displayer = self.alu_display
 		self.cpu.inner_data_bus.displayer = self.inner_bus_display
 		self.cpu.address_bus.displayer = self.address_bus_display
@@ -76,6 +83,8 @@ class CPUDisplay(Widget):
 		with Horizontal(id="cpu-layout"):
 			with Vertical(id="control-column"):
 				yield self.control_display
+				yield self.input_display
+				yield self.output_display
 				yield self.alu_display
 			with Vertical(id="inner-bus-column"):
 				yield self.inner_bus_display

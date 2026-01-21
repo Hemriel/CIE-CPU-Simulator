@@ -1,4 +1,4 @@
-from typing import Any
+from cpu.RAM import RAM
 
 from rich.panel import Panel
 from rich.text import Text
@@ -8,15 +8,15 @@ from textual.widgets import Static
 class RAMAddressDisplay(Static):
     """Shows the address currently being accessed in RAM."""
 
-    def __init__(self, cpu: Any) -> None:
+    def __init__(self, ram: RAM) -> None:
         super().__init__()
-        self.cpu = cpu
+        self.ram = ram
         self.update_display()
 
     def update_display(self) -> None:
-        address = self.cpu.ram_address.address
+        address = self.ram.address_comp.address
         text = Text(f"Focused Address: {address:04X}")
-        panel = Panel(text, title="RAM Address", border_style="magenta")
+        panel = Panel(text)
         self.update(panel)
 
 
@@ -25,18 +25,18 @@ class RAMDataDisplay(Static):
 
     WINDOW = 8
 
-    def __init__(self, cpu: Any) -> None:
+    def __init__(self, ram: RAM) -> None:
         super().__init__()
-        self.cpu = cpu
+        self.ram = ram
         self.update_display()
 
     def update_display(self) -> None:
-        focus = self.cpu.ram_address.address
+        focus = self.ram.address_comp.address
         start = max(0, focus - self.WINDOW // 2)
         lines = []
         for offset in range(self.WINDOW):
             addr = start + offset
-            value = self.cpu.ram.memory.get(addr, 0)
+            value = self.ram.memory.get(addr, 0)
             marker = ">" if addr == focus else " "
             lines.append(f"{marker} {addr:04X}: {value:04X}")
         text = Text("\n".join(lines))

@@ -1,4 +1,4 @@
-from typing import Any
+from cpu.buses import Bus
 
 from rich.panel import Panel
 from rich.text import Text
@@ -8,7 +8,7 @@ from textual.widgets import Static
 class InternalBusDisplay(Static):
     """Placeholder for the inner data bus between the CU/ALU and the registers."""
 
-    def __init__(self, bus: Any) -> None:
+    def __init__(self, bus: Bus) -> None:
         super().__init__()
         self.bus = bus
         self.update_display()

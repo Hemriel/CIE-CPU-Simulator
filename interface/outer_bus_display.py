@@ -1,4 +1,4 @@
-from typing import Any
+from cpu.buses import Bus
 
 from rich.panel import Panel
 from rich.text import Text
@@ -8,7 +8,7 @@ from textual.widgets import Static
 class OuterBusDisplay(Static):
     """Generic outer bus representation (address or data)."""
 
-    def __init__(self, bus: Any, title: str, color: str) -> None:
+    def __init__(self, bus: Bus, title: str, color: str) -> None:
         super().__init__()
         self.bus = bus
         self.title = title

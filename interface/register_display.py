@@ -1,4 +1,4 @@
-from typing import Any
+from cpu.register import Register
 
 from rich.panel import Panel
 from rich.text import Text
@@ -8,7 +8,7 @@ from textual.widgets import Static
 class RegisterDisplay(Static):
     """Displays a single register value and its most recent control signal."""
 
-    def __init__(self, register: Any, label: str) -> None:
+    def __init__(self, register: Register, label: str) -> None:
         super().__init__()
         self.register = register
         self.label = label
