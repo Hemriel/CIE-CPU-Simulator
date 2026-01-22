@@ -39,8 +39,8 @@ class ALU(CPUComponent):
 
     name: ComponentName = ComponentName.ALU
     control: ControlSignal | None = None
-    operand_a: int = 0
-    operand_b: int = 0
+    acc: int = 0
+    operand: int = 0
     result: int = 0
     flag_component: FlagComponent = field(default_factory=FlagComponent)
 
@@ -56,28 +56,28 @@ class ALU(CPUComponent):
         self.control = control
         self._update_display()
 
-    def set_operands(self, operand_a: int, operand_b: int) -> None:
+    def set_operands(self, acc: int, operand: int) -> None:
         """Provide operands from register transfers and redraw the panel."""
 
-        self.operand_a = operand_a
-        self.operand_b = operand_b
+        self.acc = acc
+        self.operand = operand
         self._update_display()
 
     def compute(self) -> None:
         """Execute the selected ControlSignal, store the result, and update flags."""
         # Every ControlSignal maps to a deterministic arithmetic or logic function.
         if self.control == ControlSignal.ADD:
-            self._set_result(self.operand_a + self.operand_b)
+            self._set_result(self.acc + self.operand)
         elif self.control == ControlSignal.SUB:
-            self._set_result(self.operand_a - self.operand_b)
+            self._set_result(self.acc - self.operand)
         elif self.control == ControlSignal.AND:
-            self._set_result(self.operand_a & self.operand_b)
+            self._set_result(self.acc & self.operand)
         elif self.control == ControlSignal.OR:
-            self._set_result(self.operand_a | self.operand_b)
+            self._set_result(self.acc | self.operand)
         elif self.control == ControlSignal.XOR:
-            self._set_result(self.operand_a ^ self.operand_b)
+            self._set_result(self.acc ^ self.operand)
         elif self.control == ControlSignal.CMP:
-            compare = self.operand_a == self.operand_b
+            compare = self.acc == self.operand
             self.flag_component.write(compare)
         else:
             self._set_result(0)  # Default fallback for unsupported operations.
@@ -90,6 +90,6 @@ class ALU(CPUComponent):
     def __repr__(self) -> str:
         return (
             f"Control: {self.control} | "
-            f"Operand A: {self.operand_a:04X} | Operand B: {self.operand_b:04X} | "
+            f"Operand A: {self.acc:04X} | Operand B: {self.operand:04X} | "
             f"Result: {self.result:04X}"
         )

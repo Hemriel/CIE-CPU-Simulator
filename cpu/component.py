@@ -35,6 +35,7 @@ class CPUComponent(Protocol):
     """
 
     name: ComponentName
+    last_active: bool = False
     displayer: Displayer | None = None
 
     def _update_display(self):
@@ -51,3 +52,8 @@ class CPUComponent(Protocol):
     def write(self, data: int) -> None:
         """Write data to the component. To be implemented by subclasses."""
         raise NotImplementedError("Subclasses must implement the write method.")
+
+    def set_last_active(self, active: bool) -> None:
+        """Set whether the component was active during the last cycle for UI purposes."""
+        self.last_active = active
+        self._update_display()

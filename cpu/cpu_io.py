@@ -15,7 +15,7 @@ class IO(CPUComponent):
     """
 
     name: ComponentName
-    contents: str = ""
+    contents: str = "example"
 
     def write(self, data: int) -> None:
         """Enqueue a byte by converting it to an ASCII character and refreshing the UI."""

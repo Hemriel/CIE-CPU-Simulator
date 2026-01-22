@@ -9,8 +9,9 @@ from common.constants import ComponentName, WORD_SIZE
 class EndPoint(Protocol):
     """Represent a visual attachment point whose position on the bus can be queried."""
 
-    def get_position(self) -> int:
-        """Return the layout position used for highlighting a bus connection."""
+    def get_position(self) -> tuple[int,int]:
+        """Return the layout position used for highlighting a bus connection.
+        the first element is the line, the second is the column the element sits."""
         ...
 
 

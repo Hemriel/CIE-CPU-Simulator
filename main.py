@@ -20,7 +20,7 @@ def load_fib2_program(cpu: CPU, source: Path) -> None:
 class CPUInterfaceApp(App):
     """Minimal Textual app that hooks the CPU display and drives a simple clock."""
 
-    CSS_PATH = None
+    CSS_PATH = "interface/styles.tcss"
 
     def __init__(self, cpu: CPU) -> None:
         super().__init__()
@@ -41,7 +41,7 @@ class CPUInterfaceApp(App):
             # self.cpu_display.refresh_all()
             if finished:
                 break
-            await asyncio.sleep(0.25)
+            await asyncio.sleep(1)
 
 
 def main() -> None:

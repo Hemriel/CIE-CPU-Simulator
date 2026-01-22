@@ -233,9 +233,13 @@ class CU(CPUComponent):
             self.enter_phase(self.current_phase)
         return False
 
-    def execute_RTN_step(self, step: RTNStep) -> None:
+    def execute_RTN_step(self, step: RTNStep, reset_active: bool = True) -> None:
         """Execute a single RTN step by coordinating component actions."""
         # The RTN step classes act like tiny microinstructions; this table routes each kind to the right helper.
+        if reset_active:
+            for component in self.components.values():
+                component.set_last_active(False)
+        self.set_last_active(True)
         dispatcher = {
             SimpleTransferStep: self._handle_simple_transfer,
             ConditionalTransferStep: self._handle_conditional_transfer,
@@ -275,8 +279,11 @@ class CU(CPUComponent):
     def _handle_simple_transfer(self, step: SimpleTransferStep) -> None:
         """Move data along the inner data bus exactly as RTN lists."""
         source_comp = self.components[step.source]
+        source_comp.set_last_active(True)
         dest_comp = self._get_dest(step.destination)
+        dest_comp.set_last_active(True)
         bus = self.components[ComponentName.INNER_DATA_BUS]
+        bus.set_last_active(True)
         data = source_comp.read()
         bus.write(data)
         dest_comp.write(data)
@@ -292,23 +299,31 @@ class CU(CPUComponent):
         if step.is_address:
             # Address fetch step (MAR -> memory address bus).
             mar = self.components[ComponentName.MAR]
+            mar.set_last_active(True)
             ram_address = self.components[ComponentName.RAM_ADDRESS]
+            ram_address.set_last_active(True)
             bus = self.components[ComponentName.ADDRESS_BUS]
+            bus.set_last_active(True)
             address = mar.read()
             bus.write(address)
             ram_address.write(address)
         else:
             # Data transfer step uses the MDR/RAM data registers depending on the control signal.
             bus = self.components[ComponentName.OUTER_DATA_BUS]
+            bus.set_last_active(True)
             if step.control == ControlSignal.WRITE:
                 ram_data = self.components[ComponentName.RAM_DATA]
+                ram_data.set_last_active(True)
                 mdr = self.components[ComponentName.MDR]
+                mdr.set_last_active(True)
                 data = mdr.read()
                 bus.write(data)
                 ram_data.write(data)
             else:
                 mdr = self.components[ComponentName.MDR]
+                mdr.set_last_active(True)
                 ram_data = self.components[ComponentName.RAM_DATA]
+                ram_data.set_last_active(True)
                 data = ram_data.read()
                 bus.write(data)
                 mdr.write(data)
@@ -316,8 +331,11 @@ class CU(CPUComponent):
     def _handle_alu_operation(self, step: ALUOperationStep) -> None:
         # ALU operations always read the ACC first and combine it with the RTN operand.
         alu: ALU = self.components[ComponentName.ALU]  # type: ignore Generic type 'CPUComponent' has no attribute 'set_operands', but ALU does.
+        alu.set_last_active(True)
         acc = self.components[ComponentName.ACC]
+        acc.set_last_active(True)
         source_comp = self.components[step.source]
+        source_comp.set_last_active(True)
         alu.set_operands(acc.read(), source_comp.read())
         alu.set_mode(step.control)
         alu.compute()
@@ -325,9 +343,11 @@ class CU(CPUComponent):
     def _handle_reg_operation(self, step: RegOperationStep) -> None:
         # Register INC/DEC steps can use another register to define how far to move.
         reg_comp = self._get_dest(step.destination)
+        reg_comp.set_last_active(True)
         offset = 1
         if step.source:
             source_comp = self.components[step.source]
+            source_comp.set_last_active(True)
             offset = source_comp.read()
         if step.control == ControlSignal.INC:
             value = reg_comp.read()

@@ -10,6 +10,7 @@ class InternalBusDisplay(Static):
 
     def __init__(self, bus: Bus) -> None:
         super().__init__()
+        self.id = "internal-bus-display"
         self.bus = bus
         self.update_display()
 
@@ -18,5 +19,9 @@ class InternalBusDisplay(Static):
             f"Values: {self.bus.value:04X}\n"
             f"Active: {self.bus.active}"
         )
+        if self.bus.last_active:
+            self.remove_class("inactive")
+        else:
+            self.add_class("inactive")
         panel = Panel(text, title="Inner Data Bus")
         self.update(panel)
