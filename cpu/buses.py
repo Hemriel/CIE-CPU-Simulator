@@ -1,4 +1,8 @@
-"""Minimal display-only buses for visualizing RTN data paths in the supervisor UI."""
+"""Minimal display-only buses for visualizing RTN data paths.
+
+These buses are primarily for the UI: the control unit updates them so the
+interface can highlight which data path was active on each RTN step.
+"""
 
 from dataclasses import dataclass, field
 from typing import Protocol
@@ -25,6 +29,10 @@ class Bus(CPUComponent):
     active: bool = False
     value: int = 0
 
+    # UI-only metadata describing the last logical connection driven on this bus.
+    # When None, the bus has no known endpoints for the current cycle.
+    last_connection: tuple[ComponentName, ComponentName] | None = None
+
     def read(self) -> int:
         """Buses should not be read from, but this will return the current value."""
         return self.value
@@ -32,6 +40,22 @@ class Bus(CPUComponent):
     def write(self, data: int) -> None:
         """Update the bus value for display purposes and refresh the UI."""
         self.value = data % (1 << WORD_SIZE)
+        self._update_display()
+
+    def set_last_connection(
+        self, source: ComponentName | None, destination: ComponentName | None
+    ) -> None:
+        """Record which components were connected on the last cycle.
+
+        Args:
+            source: Component that drove the bus.
+            destination: Component that received the bus value.
+        """
+
+        if source is None or destination is None:
+            self.last_connection = None
+        else:
+            self.last_connection = (source, destination)
         self._update_display()
 
     def set_active(self, active: bool) -> None:

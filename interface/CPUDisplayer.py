@@ -15,6 +15,8 @@ from interface.IO_display import IODisplay
 from interface.ram_display import RAMAddressDisplay, RAMDataDisplay
 from interface.vspacer import VSpacer
 
+from common.constants import ComponentName
+
 
 class CPUDisplay(Widget):
     """Layout the CPU interface widgets in their rough spatial arrangement."""
@@ -28,11 +30,6 @@ class CPUDisplay(Widget):
         self.output_display = IODisplay(cpu.io_out, "Output-Port")
         self.output_display.add_class("inactive")
         self.alu_display = ALUDisplay(cpu.alu)
-        self.inner_bus_display = InternalBusDisplay(cpu.inner_data_bus)
-        self.address_bus_display = OuterBusDisplay(cpu.address_bus, title="Address-Bus")
-        self.outer_data_bus_display = OuterBusDisplay(
-            cpu.outer_data_bus, title="RAM-Data-Bus"
-        )
         self.register_displays = [
             RegisterDisplay(cpu.mar, "MAR"),
             RegisterDisplay(cpu.mdr, "MDR"),
@@ -43,6 +40,32 @@ class CPUDisplay(Widget):
         ]
         self.ram_address_display = RAMAddressDisplay(cpu.ram)
         self.ram_data_display = RAMDataDisplay(cpu.ram)
+
+        # Endpoint lookup table for bus wiring.
+        self._endpoints: dict[ComponentName, object] = {
+            ComponentName.CU: self.control_display,
+            ComponentName.ALU: self.alu_display,
+            ComponentName.IN: self.input_display,
+            ComponentName.OUT: self.output_display,
+            ComponentName.RAM_ADDRESS: self.ram_address_display,
+            ComponentName.RAM_DATA: self.ram_data_display,
+        }
+        for display in self.register_displays:
+            # RegisterDisplay.id is the name string (e.g. "MAR").
+            if display.id:
+                try:
+                    self._endpoints[ComponentName(str(display.id))] = display
+                except Exception:
+                    pass
+
+        # Buses depend on the endpoint mapping, so create them last.
+        self.inner_bus_display = InternalBusDisplay(cpu.inner_data_bus, self._endpoints)
+        self.address_bus_display = OuterBusDisplay(
+            cpu.address_bus, title="Address-Bus", endpoints=self._endpoints
+        )
+        self.outer_data_bus_display = OuterBusDisplay(
+            cpu.outer_data_bus, title="RAM-Data-Bus", endpoints=self._endpoints
+        )
         self._displayers = [
             self.control_display,
             self.input_display,

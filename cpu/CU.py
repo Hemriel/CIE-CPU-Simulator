@@ -91,6 +91,7 @@ class CU(CPUComponent):
     operand: int | None = None
 
     current_RTNStep: RTNStep | None = None
+    last_RTNStep: RTNStep | None = None
     RTN_sequence: list[RTNStep] = field(default_factory=list)
     RTN_sequence_index: int = 0
     current_phase: CyclePhase = field(default_factory=lambda: CYCLE_PHASES.__next__())
@@ -117,6 +118,7 @@ class CU(CPUComponent):
             )
 
         self.enter_phase(self.current_phase)
+        self._update_display()
 
     def stringify_operand(self) -> str:
         # logic changes depending on whether opcode is set
@@ -132,7 +134,7 @@ class CU(CPUComponent):
                 return key.name
         # Otherwise, just return the raw operand value.
         return str(self.operand)
-        
+
     def read(self) -> int:
         return self.operand if self.operand is not None else 0
 
@@ -200,37 +202,73 @@ class CU(CPUComponent):
             else:
                 self.RTN_sequence = []
                 return
-        self.current_RTNStep = self.RTN_sequence[0]
-        self._update_display()
+        # Note: We intentionally do not advance or display the *next* step at the
+        # end of the previous tick. Instead, we select the step to execute at the
+        # start of the next tick (see step_cycle), so the UI stays in sync with
+        # whichever components were active for the tick just executed.
+        self.current_RTNStep = self.RTN_sequence[0] if self.RTN_sequence else None
 
     def step_RTNSeries(self) -> bool:
-        """Advance to the next RTN step in the current instruction's sequence.
+        """Execute exactly one RTN step from the current RTN sequence.
 
-        If the end of the sequence is reached, returns True.
+        This helper advances the RTN sequence index but does **not** change the
+        CPU phase. Phase transitions are handled in :meth:`step_cycle` at the
+        start of the next tick so the CU display does not get ahead of the rest
+        of the CPU visualisation.
+
+        Returns:
+            True if the RTN sequence has been fully executed after this step.
         """
-        if self.current_RTNStep is None:
-            raise ValueError("No current RTN step to execute.")
 
-        self.execute_RTN_step(self.current_RTNStep)
-        self.RTN_sequence_index += 1
-        self._update_display()
-
-        if self.RTN_sequence_index < len(self.RTN_sequence):
-            self.current_RTNStep = self.RTN_sequence[self.RTN_sequence_index]
-            return False
-        else:
+        if not self.RTN_sequence:
             self.current_RTNStep = None
             return True
 
-    def step_cycle(self) -> bool:
-        if not self.RTN_sequence:
-            # Empty RTN sequence means the program has ended or no instruction is loaded.
+        if self.RTN_sequence_index >= len(self.RTN_sequence):
+            self.current_RTNStep = None
             return True
-        if (
-            self.step_RTNSeries()
-        ):  # step_RTNSeries executes an RTN and returns True if the sequence is complete
+
+        # Select the step to execute *now* (based on the current index).
+        self.current_RTNStep = self.RTN_sequence[self.RTN_sequence_index]
+        self.execute_RTN_step(self.current_RTNStep)
+        self.last_RTNStep = self.current_RTNStep
+        self.RTN_sequence_index += 1
+        self._update_display()
+
+        return self.RTN_sequence_index >= len(self.RTN_sequence)
+
+    def step_cycle(self) -> bool:
+        """Advance the CPU by one *visible* micro-step.
+
+        The CU prepares (phase changes + choosing the RTN step) **before** it
+        executes the step. That way, the CU widget shows the same phase/RTN step
+        that the rest of the CPU components are highlighting for this tick.
+
+        Returns:
+            True if the program has finished and there are no more RTN steps.
+        """
+
+        # Empty RTN sequence means the program has ended or no instruction is loaded.
+        if not self.RTN_sequence:
+            self.current_RTNStep = None
+            self._update_display()
+            return True
+
+        # If we finished the previous phase's RTN sequence on the last tick,
+        # advance the phase *now* (at the start of this tick), before executing
+        # anything. This prevents the CU display from jumping ahead.
+        if self.RTN_sequence_index >= len(self.RTN_sequence):
             self.current_phase = CYCLE_PHASES.__next__()
             self.enter_phase(self.current_phase)
+
+            if not self.RTN_sequence:
+                self.current_RTNStep = None
+                self._update_display()
+                return True
+
+        # Execute one step from the (possibly new) phase. We intentionally do
+        # not transition phases at the end of this call.
+        self.step_RTNSeries()
         return False
 
     def execute_RTN_step(self, step: RTNStep, reset_active: bool = True) -> None:
@@ -275,15 +313,40 @@ class CU(CPUComponent):
             if not destination:
                 raise ValueError(f"Invalid register index in operand: {reg_index}")
             return self.components[destination]
+
+    def _resolve_destination_name(self, destination: ComponentName) -> ComponentName:
+        """Resolve operand-based destinations into an explicit ComponentName.
+
+        Some instructions (MOV/INC/DEC) encode a register index inside the operand.
+        When RTN steps target OPERAND, we resolve it into the specific register name
+        so the UI can draw accurate bus connections.
+        """
+
+        if destination != ComponentName.OPERAND:
+            return destination
+        if self.operand is None:
+            raise ValueError("Operand is not set; cannot determine destination register.")
+        reg_index = self.operand
+        for key, value in RegisterIndex.items():
+            if value == reg_index:
+                return key
+        raise ValueError(f"Invalid register index in operand: {reg_index}")
         
     def _handle_simple_transfer(self, step: SimpleTransferStep) -> None:
         """Move data along the inner data bus exactly as RTN lists."""
         source_comp = self.components[step.source]
         source_comp.set_last_active(True)
-        dest_comp = self._get_dest(step.destination)
+        dest_name = self._resolve_destination_name(step.destination)
+        dest_comp = self.components[dest_name]
         dest_comp.set_last_active(True)
         bus = self.components[ComponentName.INNER_DATA_BUS]
         bus.set_last_active(True)
+        # Record the endpoints for UI wiring.
+        try:
+            bus.set_last_connection(step.source, dest_name)  # type: ignore[attr-defined]
+        except Exception:
+            # Keep the CPU simulation robust even if UI metadata isn't available.
+            pass
         data = source_comp.read()
         bus.write(data)
         dest_comp.write(data)
@@ -304,6 +367,10 @@ class CU(CPUComponent):
             ram_address.set_last_active(True)
             bus = self.components[ComponentName.ADDRESS_BUS]
             bus.set_last_active(True)
+            try:
+                bus.set_last_connection(ComponentName.MAR, ComponentName.RAM_ADDRESS)  # type: ignore[attr-defined]
+            except Exception:
+                pass
             address = mar.read()
             bus.write(address)
             ram_address.write(address)
@@ -316,6 +383,10 @@ class CU(CPUComponent):
                 ram_data.set_last_active(True)
                 mdr = self.components[ComponentName.MDR]
                 mdr.set_last_active(True)
+                try:
+                    bus.set_last_connection(ComponentName.MDR, ComponentName.RAM_DATA)  # type: ignore[attr-defined]
+                except Exception:
+                    pass
                 data = mdr.read()
                 bus.write(data)
                 ram_data.write(data)
@@ -324,6 +395,10 @@ class CU(CPUComponent):
                 mdr.set_last_active(True)
                 ram_data = self.components[ComponentName.RAM_DATA]
                 ram_data.set_last_active(True)
+                try:
+                    bus.set_last_connection(ComponentName.RAM_DATA, ComponentName.MDR)  # type: ignore[attr-defined]
+                except Exception:
+                    pass
                 data = ram_data.read()
                 bus.write(data)
                 mdr.write(data)

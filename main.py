@@ -1,4 +1,3 @@
-import asyncio
 from pathlib import Path
 
 from textual.app import App
@@ -22,26 +21,35 @@ class CPUInterfaceApp(App):
 
     CSS_PATH = "interface/styles.tcss"
 
+    BINDINGS = [
+        ("t", "tick", "Tick"),
+        ("q", "quit", "Quit"),
+    ]
+
     def __init__(self, cpu: CPU) -> None:
         super().__init__()
         self.cpu = cpu
         self.cpu_display = CPUDisplay(cpu)
+        self._finished = False
 
     def compose(self):
         yield Header()
         yield self.cpu_display
         yield Footer()
 
-    async def on_mount(self) -> None:
-        self._cpu_task = asyncio.create_task(self._run_cpu_loop())
+    def action_tick(self) -> None:
+        """Advance the simulation by exactly one RTN step.
 
-    async def _run_cpu_loop(self) -> None:
-        while True:
-            finished = self.cpu.step()
-            # self.cpu_display.refresh_all()
-            if finished:
-                break
-            await asyncio.sleep(1)
+        This is intended for debugging / teaching: users can step through the
+        fetch-decode-execute micro-operations one at a time and inspect the
+        bus wiring and component highlights.
+        """
+
+        if self._finished:
+            return
+
+        self._finished = self.cpu.step()
+        self.cpu_display.refresh_all()
 
 
 def main() -> None:
