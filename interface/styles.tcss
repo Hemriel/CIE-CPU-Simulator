@@ -1,5 +1,23 @@
 #code-editor {
     width: 30;
+    height: 100%;
+    border: heavy;
+}
+
+#labels-column {
+    width: 24;
+    height: 100%;
+}
+
+InstructionLabelDisplay {
+    width: 100%;
+    height: 1fr;
+    border: heavy;
+}
+
+VariableLabelDisplay {
+    width: 100%;
+    height: 1fr;
     border: heavy;
 }
 
@@ -85,4 +103,13 @@ ALUDisplay {
 
 .inactive {
     opacity: 0.4;
+}
+
+#status-line {
+    width: 100%;
+    height: 1;
+    background: #222222;
+    color: #DDDDDD;
+    content-align: left middle;
+    padding: 0 1;
 }
