@@ -47,7 +47,6 @@ class ComponentName(StrEnum):
     RAM_ADDRESS = "RAM_ADDRESS"
     RAM_DATA = "RAM_DATA"
     INNER_DATA_BUS = "INNER_DATA_BUS"
-    OUTER_DATA_BUS = "OUTER_DATA_BUS"
     ADDRESS_BUS = "ADDRESS_BUS"
 
 RegisterIndex : dict[ComponentName, int] = {

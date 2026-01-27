@@ -50,10 +50,12 @@ class OuterBusDisplay(Static):
 
         canvas = [" " * width for _ in range(height)]
 
-        if not self.bus.last_active or not getattr(self.bus, "last_connection", None):
+        connections = getattr(self.bus, "last_connections", [])
+        if not self.bus.last_active or not connections:
             return Text("\n".join(canvas), no_wrap=True)
 
-        source_name, dest_name = self.bus.last_connection  # type: ignore[assignment]
+        # Outer bus currently draws a single connection per cycle.
+        source_name, dest_name = connections[0]
         bus_region = safe_screen_region(self)
         if bus_region is None:
             return Text("\n".join(canvas), no_wrap=True)

@@ -61,10 +61,7 @@ class CPUDisplay(Widget):
         # Buses depend on the endpoint mapping, so create them last.
         self.inner_bus_display = InternalBusDisplay(cpu.inner_data_bus, self._endpoints)
         self.address_bus_display = OuterBusDisplay(
-            cpu.address_bus, title="Address-Bus", endpoints=self._endpoints
-        )
-        self.outer_data_bus_display = OuterBusDisplay(
-            cpu.outer_data_bus, title="RAM-Data-Bus", endpoints=self._endpoints
+            cpu.address_bus, title="Outer-Bus", endpoints=self._endpoints
         )
         self._displayers = [
             self.control_display,
@@ -73,7 +70,6 @@ class CPUDisplay(Widget):
             self.alu_display,
             self.inner_bus_display,
             self.address_bus_display,
-            self.outer_data_bus_display,
             self.ram_address_display,
             self.ram_data_display,
             *self.register_displays,
@@ -87,7 +83,6 @@ class CPUDisplay(Widget):
         self.cpu.alu.displayer = self.alu_display
         self.cpu.inner_data_bus.displayer = self.inner_bus_display
         self.cpu.address_bus.displayer = self.address_bus_display
-        self.cpu.outer_data_bus.displayer = self.outer_data_bus_display
         self.cpu.ram_address.displayer = self.ram_address_display
         self.cpu.ram.displayer = self.ram_data_display
         for register, display in zip(
@@ -124,7 +119,6 @@ class CPUDisplay(Widget):
                 yield VSpacer()
             with Vertical(id="outer-bus-column"):
                 yield self.address_bus_display
-                yield self.outer_data_bus_display
             with Vertical(id="ram-column"):
                 yield self.ram_address_display
                 yield self.ram_data_display

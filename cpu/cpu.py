@@ -24,7 +24,6 @@ class CPU:
         # Buses are purely for RTN visualization and so just exist as placeholders.
         self.address_bus = Bus(name=ComponentName.ADDRESS_BUS)
         self.inner_data_bus = Bus(name=ComponentName.INNER_DATA_BUS)
-        self.outer_data_bus = Bus(name=ComponentName.OUTER_DATA_BUS)
 
         # The ALU talks to a devoted flag latch so CMP updates the comparison flag.
         self.cmp_flag = FlagComponent()
@@ -50,7 +49,6 @@ class CPU:
             cmp_flag=self.cmp_flag,
             address_bus=self.address_bus,
             inner_data_bus=self.inner_data_bus,
-            outer_data_bus=self.outer_data_bus,
             ram_address=self.ram_address,
             ram_data=self.ram,
             in_component=self.io_in,

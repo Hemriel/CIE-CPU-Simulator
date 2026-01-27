@@ -47,45 +47,102 @@ class InternalBusDisplay(Static):
         # Default blank canvas.
         canvas = [" " * width for _ in range(height)]
 
-        if not self.bus.last_active or not getattr(self.bus, "last_connection", None):
+        connections = getattr(self.bus, "last_connections", [])
+        if not self.bus.last_active or not connections:
             return Text("\n".join(canvas), no_wrap=True)
 
-        source_name, dest_name = self.bus.last_connection  # type: ignore[assignment]
+        # Support 1 connection (typical RTN transfers) and multi-source connections
+        # with a shared destination (ALU operations).
+        dest_name = connections[0][1]
+        source_names = [src for (src, dst) in connections if dst == dest_name]
         bus_region = safe_screen_region(self)
         if bus_region is None:
             return Text("\n".join(canvas), no_wrap=True)
 
-        source_widget = self._endpoints.get(source_name)
         dest_widget = self._endpoints.get(dest_name)
-        if source_widget is None or dest_widget is None:
+        if dest_widget is None:
             return Text("\n".join(canvas), no_wrap=True)
-
-        source_region = safe_screen_region(source_widget)
         dest_region = safe_screen_region(dest_widget)
-        if source_region is None or dest_region is None:
+        if dest_region is None:
             return Text("\n".join(canvas), no_wrap=True)
 
-        source_side = which_side(bus_region, source_region)
         dest_side = which_side(bus_region, dest_region)
-
-        source_y_screen = widget_anchor_y(source_widget, mode="center")
         dest_y_screen = widget_anchor_y(dest_widget, mode="center")
-        if source_y_screen is None or dest_y_screen is None:
+        if dest_y_screen is None:
+            return Text("\n".join(canvas), no_wrap=True)
+        dest_y = max(0, min(height - 1, dest_y_screen - bus_region.y))
+        dest_side_norm = "left" if dest_side == "left" else "right"
+
+        # Collect sources (skip any missing endpoints).
+        source_points: list[tuple[str, int]] = []
+        for source_name in source_names:
+            source_widget = self._endpoints.get(source_name)
+            if source_widget is None:
+                continue
+            source_region = safe_screen_region(source_widget)
+            if source_region is None:
+                continue
+            source_side = which_side(bus_region, source_region)
+            source_y_screen = widget_anchor_y(source_widget, mode="center")
+            if source_y_screen is None:
+                continue
+            source_y = max(0, min(height - 1, source_y_screen - bus_region.y))
+            source_points.append(("left" if source_side == "left" else "right", source_y))
+
+        if not source_points:
             return Text("\n".join(canvas), no_wrap=True)
 
-        source_y = max(0, min(height - 1, source_y_screen - bus_region.y))
-        dest_y = max(0, min(height - 1, dest_y_screen - bus_region.y))
+        # Single-connection case.
+        if len(source_points) == 1:
+            source_side_norm, source_y = source_points[0]
+            canvas = draw_connection_ascii(
+                width=width,
+                height=height,
+                source_side=source_side_norm,
+                source_y=source_y,
+                dest_side=dest_side_norm,
+                dest_y=dest_y,
+                show_arrow=True,
+            )
+            return Text("\n".join(canvas), no_wrap=True)
 
-        canvas = draw_connection_ascii(
-            width=width,
-            height=height,
-            source_side="left" if source_side == "left" else "right",
-            source_y=source_y,
-            dest_side="left" if dest_side == "left" else "right",
-            dest_y=dest_y,
-            show_arrow=True,
-        )
+        # Multi-source to one destination: draw a shared trunk and multiple stubs.
+        trunk_x = width // 2
+        left_edge = 0
+        right_edge = width - 1
 
+        def edge_x(side: str) -> int:
+            return left_edge if side == "left" else right_edge
+
+        ys = [y for _, y in source_points] + [dest_y]
+        y_min, y_max = min(ys), max(ys)
+
+        grid = [list(row) for row in canvas]
+
+        # Vertical trunk.
+        for y in range(y_min, y_max + 1):
+            if grid[y][trunk_x] == " ":
+                grid[y][trunk_x] = "|"
+
+        # Source stubs.
+        for side, y in source_points:
+            ex = edge_x(side)
+            x1, x2 = (ex, trunk_x) if ex <= trunk_x else (trunk_x, ex)
+            for x in range(x1, x2 + 1):
+                if grid[y][x] == " ":
+                    grid[y][x] = "-"
+            grid[y][trunk_x] = "+"
+
+        # Destination stub + arrow.
+        dex = edge_x(dest_side_norm)
+        x1, x2 = (dex, trunk_x) if dex <= trunk_x else (trunk_x, dex)
+        for x in range(x1, x2 + 1):
+            if grid[dest_y][x] == " ":
+                grid[dest_y][x] = "-"
+        grid[dest_y][trunk_x] = "+"
+        grid[dest_y][dex] = "<" if dest_side_norm == "left" else ">"
+
+        canvas = ["".join(r) for r in grid]
         return Text("\n".join(canvas), no_wrap=True)
 
     def update_display(self) -> None:

@@ -29,9 +29,10 @@ class Bus(CPUComponent):
     active: bool = False
     value: int = 0
 
-    # UI-only metadata describing the last logical connection driven on this bus.
-    # When None, the bus has no known endpoints for the current cycle.
-    last_connection: tuple[ComponentName, ComponentName] | None = None
+    # UI-only metadata describing the last logical connection(s) driven on this bus.
+    # Most RTN steps drive a single source->destination transfer, but some visuals
+    # (e.g. ALU operations) need to show multiple sources feeding one destination.
+    last_connections: list[tuple[ComponentName, ComponentName]] = field(default_factory=list)
 
     def read(self) -> int:
         """Buses should not be read from, but this will return the current value."""
@@ -42,20 +43,17 @@ class Bus(CPUComponent):
         self.value = data % (1 << WORD_SIZE)
         self._update_display()
 
-    def set_last_connection(
-        self, source: ComponentName | None, destination: ComponentName | None
+    def set_last_connections(
+        self, connections: list[tuple[ComponentName, ComponentName]] | None
     ) -> None:
         """Record which components were connected on the last cycle.
 
         Args:
-            source: Component that drove the bus.
-            destination: Component that received the bus value.
+            connections: A list of (source, destination) transfers to visualise.
+                Use an empty list / None to clear.
         """
 
-        if source is None or destination is None:
-            self.last_connection = None
-        else:
-            self.last_connection = (source, destination)
+        self.last_connections = list(connections or [])
         self._update_display()
 
     def set_active(self, active: bool) -> None:

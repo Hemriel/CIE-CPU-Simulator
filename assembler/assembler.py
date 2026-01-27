@@ -42,7 +42,7 @@ def trim_source(source_lines: list[str]) -> list[str]:
     return trimmed_lines
 
 
-def assemble(source_lines: list[str]) -> list[int]:
+def compile(source_lines: list[str]) -> list[int]:
     """Convert raw assembly text into a contiguous list of machine words.
 
     This implements the canonical two-pass assembler:

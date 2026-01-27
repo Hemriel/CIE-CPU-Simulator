@@ -40,7 +40,6 @@ def create_required_components_for_CU(
     cmp_flag: FlagComponent,
     address_bus: Bus,
     inner_data_bus: Bus,
-    outer_data_bus: Bus,
     ram_address: RAMAddress,
     ram_data: RAM,
     in_component: IO,
@@ -63,7 +62,6 @@ def create_required_components_for_CU(
         ComponentName.CMP_Flag: cmp_flag,
         ComponentName.ADDRESS_BUS: address_bus,
         ComponentName.INNER_DATA_BUS: inner_data_bus,
-        ComponentName.OUTER_DATA_BUS: outer_data_bus,
         ComponentName.RAM_ADDRESS: ram_address,
         ComponentName.RAM_DATA: ram_data,
         ComponentName.IN: in_component,
@@ -87,6 +85,7 @@ class CU(CPUComponent):
 
     binary_instruction: int | None = None
     current_instruction: str | None = None
+    stringified_instruction: str | None = None
     opcode: int | None = None
     operand: int | None = None
 
@@ -127,7 +126,7 @@ class CU(CPUComponent):
         # If the current instruction uses a long operand, displays "long" instead of the raw value.
         instruction_def = self.get_instruction_definition(self.opcode)
         if instruction_def and instruction_def.long_operand:
-            return "long"
+            return str(self.components[ComponentName.MDR].read())
         # if the current instruction uses a RegisterIndex as operand, display the register name
         for key, value in RegisterIndex.items():
             if value == self.operand:
@@ -162,6 +161,7 @@ class CU(CPUComponent):
         instruction_def = self.get_instruction_definition(self.opcode)
         if instruction_def and instruction_def.long_operand:
             # Short instructions keep the operand in the CU, but long instructions need the MDR dance first.
+            self.stringified_instruction = self.stringify_instruction()
             self.RTN_sequence = FETCH_LONG_OPERAND_RTNSteps
         else:
             # No extra RTN steps needed for short instructions, but we still refresh the UI.
@@ -169,26 +169,35 @@ class CU(CPUComponent):
         self._update_display()
 
     def print_instruction(self) -> None:
+        print(self.stringify_instruction())
+
+
+    def stringify_instruction(self) -> str:
         """Print the current instruction in mnemonic form for debugging."""
         if self.opcode is None:
-            raise ValueError("Cannot print instruction without a valid opcode.")
+            return "None"
         instruction_def = self.get_instruction_definition(self.opcode)
         mnemonic = instruction_def.mnemonic
-        if instruction_def.long_operand:
-            operand = self.components[ComponentName.MDR].read()
+        if not instruction_def.long_operand:
+            operand = self.stringify_operand()
+        elif self.current_phase != CyclePhase.EXECUTE:
+            operand = "..."
         else:
-            operand = self.operand
-        print(f"{mnemonic} {operand}")  # type: ignore
+            operand = self.components[ComponentName.MDR].read()
+        return(f"{mnemonic} {operand}")  # type: ignore
 
     def enter_phase(self, phase: CyclePhase) -> None:
         """Set the CU to a new cycle phase and reset the RTN sequence."""
         self.RTN_sequence_index = 0
         print(f"=== {phase} ===")
         if phase == CyclePhase.FETCH:
+            self.stringified_instruction = "Fetching..."
             self.RTN_sequence = FETCH_RTNSteps
         elif phase == CyclePhase.DECODE:
+            self.stringified_instruction = "Decoding..."
             self.RTN_sequence = DECODE_RTNSteps
         elif phase == CyclePhase.EXECUTE:
+            self.stringified_instruction = self.stringify_instruction()
             if self.opcode is None:
                 raise ValueError("Cannot enter EXECUTE phase without a valid opcode.")
             self.print_instruction()
@@ -343,7 +352,7 @@ class CU(CPUComponent):
         bus.set_last_active(True)
         # Record the endpoints for UI wiring.
         try:
-            bus.set_last_connection(step.source, dest_name)  # type: ignore[attr-defined]
+            bus.set_last_connections([(step.source, dest_name)])  # type: ignore[attr-defined]
         except Exception:
             # Keep the CPU simulation robust even if UI metadata isn't available.
             pass
@@ -368,7 +377,7 @@ class CU(CPUComponent):
             bus = self.components[ComponentName.ADDRESS_BUS]
             bus.set_last_active(True)
             try:
-                bus.set_last_connection(ComponentName.MAR, ComponentName.RAM_ADDRESS)  # type: ignore[attr-defined]
+                bus.set_last_connections([(ComponentName.MAR, ComponentName.RAM_ADDRESS)])  # type: ignore[attr-defined]
             except Exception:
                 pass
             address = mar.read()
@@ -376,7 +385,7 @@ class CU(CPUComponent):
             ram_address.write(address)
         else:
             # Data transfer step uses the MDR/RAM data registers depending on the control signal.
-            bus = self.components[ComponentName.OUTER_DATA_BUS]
+            bus = self.components[ComponentName.ADDRESS_BUS]
             bus.set_last_active(True)
             if step.control == ControlSignal.WRITE:
                 ram_data = self.components[ComponentName.RAM_DATA]
@@ -384,7 +393,7 @@ class CU(CPUComponent):
                 mdr = self.components[ComponentName.MDR]
                 mdr.set_last_active(True)
                 try:
-                    bus.set_last_connection(ComponentName.MDR, ComponentName.RAM_DATA)  # type: ignore[attr-defined]
+                    bus.set_last_connections([(ComponentName.MDR, ComponentName.RAM_DATA)])  # type: ignore[attr-defined]
                 except Exception:
                     pass
                 data = mdr.read()
@@ -396,7 +405,7 @@ class CU(CPUComponent):
                 ram_data = self.components[ComponentName.RAM_DATA]
                 ram_data.set_last_active(True)
                 try:
-                    bus.set_last_connection(ComponentName.RAM_DATA, ComponentName.MDR)  # type: ignore[attr-defined]
+                    bus.set_last_connections([(ComponentName.RAM_DATA, ComponentName.MDR)])  # type: ignore[attr-defined]
                 except Exception:
                     pass
                 data = ram_data.read()
@@ -411,6 +420,17 @@ class CU(CPUComponent):
         acc.set_last_active(True)
         source_comp = self.components[step.source]
         source_comp.set_last_active(True)
+
+        # UI-only: show ACC and operand source feeding the ALU via the inner bus.
+        try:
+            inner_bus: Bus = self.components[ComponentName.INNER_DATA_BUS]  # type: ignore[assignment]
+            inner_bus.set_last_active(True)
+            inner_bus.set_last_connections(
+                [(ComponentName.ACC, ComponentName.ALU), (step.source, ComponentName.ALU)]
+            )
+        except Exception:
+            pass
+
         alu.set_operands(acc.read(), source_comp.read())
         alu.set_mode(step.control)
         alu.compute()

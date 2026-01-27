@@ -13,11 +13,11 @@ class ControlUnitDisplay(Vertical):
         self.id = "control-unit-display"
         self.border_title = "CU"
         self.instr_label = Label("Instr.", classes="cu-titles")
-        self.operand_label = Label("Operand", classes="cu-titles")
+        self.assembly_label = Label("Assembly", classes="cu-titles")
         self.step_label = Label("Step", classes="cu-titles")
         self.phase_label = Label("Phase", classes="cu-titles")
         self.inst_value = Label("", classes="cu-values")
-        self.operand_value = Label("", classes="cu-values")
+        self.assembly_value = Label("", classes="cu-values")
         self.step_value = Label("", classes="cu-values")
         self.phase_value = Label("", classes="cu-values")
         self.cu = cu
@@ -27,8 +27,8 @@ class ControlUnitDisplay(Vertical):
             yield self.instr_label
             yield self.inst_value
         with Horizontal():
-            yield self.operand_label
-            yield self.operand_value
+            yield self.assembly_label
+            yield self.assembly_value
         with Horizontal():
             yield self.step_label
             yield self.step_value
@@ -44,10 +44,9 @@ class ControlUnitDisplay(Vertical):
         else:
             self.add_class("inactive")
         instruction = cu.current_instruction or "None"
-        operand = cu.stringify_operand()
         rtn_step = cu.current_RTNStep or "Idle"
         phase = getattr(cu.current_phase, "name", cu.current_phase)
         self.inst_value.content = f"{instruction}"
-        self.operand_value.content = f"{operand}"
+        self.assembly_value.content = f"{cu.stringified_instruction or 'None'}"
         self.step_value.content = f"{rtn_step}"
         self.phase_value.content = f"{phase}"
