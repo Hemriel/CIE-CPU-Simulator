@@ -1,10 +1,32 @@
 """Two-pass assembler for the CIE CPU simulator.
 
-This module tokenizes the teaching assembly language, resolves labels and
+Responsibility: 
+- This module tokenizes the teaching assembly language, resolves labels and
 variables, and emits machine words that the CPU simulator can load.
 
-It also provides :class:`AssemblerStepper`, a small state machine that can be
-advanced one "tick" at a time.
+Illustrates CIE 9618: 4.2 Assembly Language:
+- Show understanding of the relationship between assembly language and machine code.
+- Describe the different stages of the assembly process for a two pass assembler.
+
+Entry point:
+- The :class:`AssemblerStepper` class, which implements
+the two-pass assembler as a simple state machine that can be advanced one "tick"
+at a time. Each tick performs a small, easily explainable piece of work.
+Except very specific exceptions, other modules should only import and use this class.
+Their import should then just contain:
+    from assembler.assembler import AssemblerStepper
+
+Includes:
+- data classes to represent intermediate and final assembler state: 
+:class:`RamWrite`, 
+:class:`ParsingResult`,
+:class:`AssemblerSnapshot`.
+- main stepper class: 
+:class:`AssemblerStepper`.
+- helper functions for parsing and emitting instructions: 
+:func:`parse_line`,
+:func:`create_instruction_from_parsing_result`,
+:func:`operand_to_int`
 
 Educational intent
 ------------------
@@ -13,8 +35,6 @@ The stepper exists so students can *watch* the classic two-pass assembler:
 1. A quick "trim" stage removes comments and blank lines.
 2. Pass 1 scans each remaining line to build label tables.
 3. Pass 2 emits machine code and (optionally) streams it into RAM.
-
-The existing :func:`compile` helper remains available for non-interactive use.
 """
 
 from common.instructions import get_instruction_by_mnemonic
@@ -27,7 +47,41 @@ from common.constants import (
 from dataclasses import dataclass
 
 
-@dataclass(frozen=True)
+### Educational notes on Python operations used in this module ###
+#
+# Bitwise AND with "& 0xFFFF" (appears throughout this file):
+# This operation masks a value to 16 bits (the word size of our simulated CPU).
+# - 0xFFFF in binary is 16 ones: 0b1111111111111111
+# - Bitwise AND keeps only the lowest 16 bits, discarding any higher bits
+# - Example: 0x1ABCD & 0xFFFF = 0xABCD (removed the high bits)
+# - This ensures all emitted words fit in the range 0-65535 (16-bit unsigned)
+#
+# Although bitwise operations in Python are not in the A-level curriculum,
+# bitwise AND, OR, XOR, and bit shifting ARE part of the assembly language
+# curriculum (CIE 9618: 4.2), so students should be familiar with the concept.
+#
+# Data classes (appear in the section below):
+# Data classes are NOT in the curriculum.
+# Here is a detailed explanation: https://docs.python.org/3/library/dataclasses.html
+# In a few words, they are a concise way to define classes that mainly store
+# data attributes. The __init__, __repr__, __eq__, and other methods are
+# automatically generated based on the class attributes.
+#
+# @property decorator (appears in AssemblerStepper class):
+# The @property decorator is not in the curriculum (nor what decorators are).
+# It allows to define a method that can be accessed like an attribute.
+# For example, instead of calling stepper.phase(), you can just use stepper.phase
+# Benefits:
+# 1. It makes the code cleaner and easier to read.
+# 2. It allows to compute the value on-the-fly while keeping the syntax of an attribute access.
+# 3. It can be used to create read-only attributes.
+
+
+### Data classes for intermediate and final assembler state ###
+# These are simple containers for data used by the main stepper class.
+# They keep the stepper class smaller, easier to read, and focused on state management.
+
+@dataclass(frozen=True)  # See "Educational notes" at top of file
 class RamWrite:
     """One RAM write emitted during pass 2.
 
@@ -39,40 +93,47 @@ class RamWrite:
     value: int
 
 
-@dataclass
+@dataclass  # See "Educational notes" at top of file
 class ParsingResult:
     """Intermediate state produced while scanning a single source line."""
 
-    instruction_address: int = -1
-    variable_address: int = -1
-    mnemonic: str | None = None
-    operand_token: str | None = None
-    new_instruction_label: str | None = None
-    new_variable_label: str | None = None
-    next_address: int = 0
-    next_variable_address: int = 0
+    instruction_address: int = -1  # address of this instruction (if any)
+    variable_address: int = -1  # relative address of this variable (if any)
+    mnemonic: str | None = None  # instruction mnemonic (if any)
+    operand_token: str | None = None  # raw operand token (if any)
+    new_instruction_label: str | None = None  # new instruction label (if any)
+    new_variable_label: str | None = None  # new variable label (if any)
+    next_address: int = 0  # next instruction address after this line
+    next_variable_address: int = 0  # next variable address after this line
 
 
-@dataclass
+@dataclass  # See "Educational notes" at top of file
 class AssemblerSnapshot:
     """A view of the assembler's current state suitable for a UI refresh."""
 
-    phase: str
-    pass_number: int
-    current_line_index: int
-    current_line_text: str | None
-    cursor_row: int | None
-    instruction_address: int
-    variable_address: int
-    instruction_labels: dict[str, int]
-    variable_labels: dict[str, int]
-    highlight_instruction_label: str | None
-    highlight_variable_label: str | None
-    emitted_words: list[int]
-    ram_writes: list[RamWrite]
-    editor_text: str | None = None
-    message: str | None = None
+    phase: str  # current phase name
+    pass_number: int  # 0=trim, 1=pass1, 2=pass2
+    current_line_index: int  # index of the line being processed
+    current_line_text: str | None  # text of the line being processed
+    cursor_row: int | None  # editor cursor row to highlight
+    instruction_address: int  # next instruction address
+    variable_address: int  # next variable address
+    instruction_labels: dict[str, int]  # mapping of instruction labels to addresses
+    variable_labels: dict[str, int]  # mapping of variable labels to addresses
+    highlight_instruction_label: str | None  # instruction label to highlight
+    highlight_variable_label: str | None  # variable label to highlight
+    emitted_words: list[int]  # all emitted machine words so far
+    ram_writes: list[RamWrite]  # all RAM writes emitted so far
+    editor_text: str | None = None  # full text for the source editor
+    message: str | None = None  # status or error message
 
+
+### Main assembler stepper class ###
+# This class implements the two-pass assembler as a simple state machine
+# that can be advanced one "tick" at a time. Each tick performs a small,
+# This is the main entry point for the assembler functionality.
+# It will be imported and used by other modules, so they don't need to know
+# about anything else in this file.
 
 class AssemblerStepper:
     """Advance the assembler a single micro-step at a time.
@@ -129,13 +190,14 @@ class AssemblerStepper:
         self._emitted_words: list[int] = []
         self._error_message: str | None = None
 
-    @property
+
+    @property  # See "Educational notes" at top of file
     def phase(self) -> str:
         """Return the current assembler phase."""
 
         return self._phase
 
-    @property
+    @property  # See "Educational notes" at top of file
     def emitted_words(self) -> list[int]:
         """Return all machine words emitted so far."""
 
@@ -144,6 +206,10 @@ class AssemblerStepper:
     def step(self) -> AssemblerSnapshot:
         """Advance the assembler by one tick.
 
+        Catches any internal assembling errors.
+        When an error occurs, transitions to the ERROR phase and returns a snapshot
+        describing the error state, so the UI can display it.
+
         Returns:
             A snapshot describing the updated state after this tick.
         """
@@ -151,7 +217,11 @@ class AssemblerStepper:
         if self._phase in (self.PHASE_DONE, self.PHASE_ERROR):
             return self._snapshot(current_line_text=None, ram_writes=[])
 
+        # This assembler raises custom errors, so we need to catch them here.
+        # Custom errors allows us to differentiate between expected errors
+        # and unexpected ones (like programming bugs).
         try:
+            # Dispatch to the appropriate phase handler.
             if self._phase == self.PHASE_TRIM:
                 return self._step_trim()
             elif self._phase == self.PHASE_PASS1_SCAN:
@@ -169,6 +239,7 @@ class AssemblerStepper:
                 current_line_text=None, ram_writes=[], message=str(exc)
             )
 
+        # Should never reach here. But if we do, transition to error state.
         self._phase = self.PHASE_ERROR
         self._error_message = "Internal assembler state error."
         return self._snapshot(
@@ -177,6 +248,8 @@ class AssemblerStepper:
 
     def run_to_completion(self, *, max_steps: int = 1_000_000) -> list[int]:
         """Run the stepper until it finishes (non-interactive use).
+
+        Catches any internal assembling errors and raises them to the caller.
 
         Args:
             max_steps: Safety limit to avoid infinite loops if a bug is introduced.
@@ -194,6 +267,13 @@ class AssemblerStepper:
         raise AssemblingError("Assembler did not finish within the step limit.")
 
     def _step_trim(self) -> AssemblerSnapshot:
+        """
+        Perform one trimming step by processing the next raw line.
+        Trimming removes comments and blank lines.
+        Returns:
+            An AssemblerSnapshot reflecting the updated state after trimming.
+        """
+        # Guard against running past the end of the raw lines.
         if self._trim_index >= len(self._raw_lines):
             # Finished trimming; move into pass 1.
             self._phase = self.PHASE_PASS1_SCAN
@@ -220,7 +300,7 @@ class AssemblerStepper:
         self._trim_index += 1
 
         # Educational UI trick: show the trimmed prefix and the original suffix.
-        # Students can watch comments/blank lines disappear as we scan downward.
+        # That way, we can watch comments/blank lines disappear as we scan downward.
         editor_text = "\n".join(
             self._trimmed_lines + self._raw_lines[self._trim_index :]
         )
@@ -233,14 +313,27 @@ class AssemblerStepper:
         )
 
     def _step_pass1_scan(self) -> AssemblerSnapshot:
+        """
+        Perform one pass 1 scanning step by processing the next trimmed line.
+        Pass 1 builds label tables without emitting machine code.
+
+        Code emission is impossible if there are forward references to labels
+        that have not yet been defined. Therefore, the first pass must scan
+        the entire program to build the label tables before any code can be emitted.
+
+        Returns:
+            An AssemblerSnapshot reflecting the updated state after scanning.
+        """
+        # Guard against running past the end of the trimmed lines.
         if self._pass1_index >= len(self._trimmed_lines):
             self._phase = self.PHASE_PASS1_FINALISE
             return self._snapshot(
                 current_line_text=None, ram_writes=[], message="Pass 1 complete."
             )
 
+        # Fetch the next line and parse it (turns it into a ParsingResult).
         line = self._trimmed_lines[self._pass1_index]
-        parsing_result = parse_line(
+        parsing_result = _parse_line(
             line, self._instruction_address, self._variable_address
         )
         self._parsing_results.append(parsing_result)
@@ -248,6 +341,8 @@ class AssemblerStepper:
         highlight_instruction_label = None
         highlight_variable_label = None
 
+        # Depending on the optionals set in the ParsingResult,
+        # update the label tables.
         if parsing_result.new_instruction_label:
             self._instruction_labels[parsing_result.new_instruction_label] = (
                 self._instruction_address
@@ -259,6 +354,8 @@ class AssemblerStepper:
             )
             highlight_variable_label = parsing_result.new_variable_label
 
+        # Advance the instruction and variable addresses as indicated.
+        # To prepare for the next line.
         self._instruction_address = parsing_result.next_address
         self._variable_address = parsing_result.next_variable_address
         self._pass1_index += 1
@@ -273,9 +370,16 @@ class AssemblerStepper:
         )
 
     def _step_pass1_finalise(self) -> AssemblerSnapshot:
+        """
+        Finalise pass 1 by verifying the program includes END instruction
+        and preparing for pass 2.
+        Returns:
+            An AssemblerSnapshot reflecting the updated state after finalising.
+        """
+
         # Check that program includes END instruction.
         end_found = False
-        for parsing_result in reversed(self._parsing_results):
+        for parsing_result in reversed(self._parsing_results):  # Start from the end
             if parsing_result.mnemonic is not None:
                 if parsing_result.mnemonic == "END":
                     end_found = True
@@ -284,23 +388,27 @@ class AssemblerStepper:
             raise AssemblingError("Program must include END instruction.")
 
         # Compute final variable addresses to place them after instructions in RAM.
+        # In most real assemblers, variables are placed before instructions,
+        # but placing them after instructions allows us to always start the
+        # program at instruction address 0.
         self._instructions_end_address = self._instruction_address
-        self._variable_labels_final = {
-            label: self._instructions_end_address + relative
-            for label, relative in self._variable_labels_relative.items()
-        }
+        self._variable_labels_final = {}
+        for label, relative in self._variable_labels_relative.items():
+            self._variable_labels_final[label] = (
+                self._instructions_end_address + relative
+            )
 
         # Split parsing results so pass 2 can emit in the desired order.
-        self._pass2_instruction_results = [
-            result
-            for result in self._parsing_results
-            if result.new_variable_label is None
-        ]
-        self._pass2_variable_results = [
-            result
-            for result in self._parsing_results
-            if result.new_variable_label is not None
-        ]
+        self._pass2_instruction_results = []
+        for result in self._parsing_results:
+            if result.new_variable_label is None:  # No variable label means instruction
+                self._pass2_instruction_results.append(result)
+
+        self._pass2_variable_results = []
+        for result in self._parsing_results:
+            if result.new_variable_label is not None:
+                self._pass2_variable_results.append(result)
+
         self._pass2_index = 0
         self._emitted_words = []
 
@@ -313,6 +421,22 @@ class AssemblerStepper:
         )
 
     def _step_pass2_emit_instructions(self) -> AssemblerSnapshot:
+        """
+        Perform one pass 2 instruction emission step by processing the next instruction.
+
+        Now that all labels have been resolved, we can emit machine code.
+        We start by emitting all instructions in a row. Variables will be emitted
+        afterwards.
+
+        We choose to start emitting instructions first so that the program
+        always starts at address 0. In real situations, the start address is 
+        handled by the operating system, not the assembler.
+
+        Returns:
+            An AssemblerSnapshot reflecting the updated state after emission.
+        """
+
+        # Guard against running past the end of the instruction results.
         if self._pass2_index >= len(self._pass2_instruction_results):
             self._phase = self.PHASE_PASS2_EMIT_VARIABLES
             self._pass2_index = 0
@@ -322,20 +446,26 @@ class AssemblerStepper:
                 message="Instructions emitted. Emitting variables...",
             )
 
+        # Turn the next ParsingResult into machine words.
+        # Some instructions emit one word; others emit two.
         parsing_result = self._pass2_instruction_results[self._pass2_index]
-        words = create_instruction_from_parsing_result(
+        words = _create_instruction_from_parsing_result(
             parsing_result,
             instruction_labels=self._instruction_labels,
             variable_labels=self._variable_labels_final,
         )
 
+        # Emit the words into RAM at the correct addresses.
+        # The first word goes at the instruction address recorded during pass 1.
+        # Subsequent words (if any) go at consecutive addresses.
         base_address = parsing_result.instruction_address
         ram_writes = []
         for offset, word in enumerate(words):
             address = base_address + offset
-            ram_writes.append(RamWrite(address=address, value=word & 0xFFFF))
-            self._emitted_words.append(word & 0xFFFF)
+            ram_writes.append(RamWrite(address=address, value=word & 0xFFFF))  # See "Educational notes" at top of file
+            self._emitted_words.append(word & 0xFFFF)  # See "Educational notes" at top of file
 
+        # Advance to the next instruction for the next step.
         self._pass2_index += 1
         return self._snapshot(
             current_line_text=parsing_result.mnemonic,
@@ -345,24 +475,37 @@ class AssemblerStepper:
         )
 
     def _step_pass2_emit_variables(self) -> AssemblerSnapshot:
+        """
+        Perform one pass 2 variable emission step by processing the next variable.
+
+        After all instructions have been emitted, we emit the variables.
+
+        Returns:
+            An AssemblerSnapshot reflecting the updated state after emission.
+        """
+
+        # Guard against running past the end of the variable results.
         if self._pass2_index >= len(self._pass2_variable_results):
             self._phase = self.PHASE_DONE
             return self._snapshot(
                 current_line_text=None, ram_writes=[], message="Assembling complete."
             )
 
+        # Turn the next ParsingResult into machine words.
         parsing_result = self._pass2_variable_results[self._pass2_index]
-        words = create_instruction_from_parsing_result(
+        words = _create_instruction_from_parsing_result(
             parsing_result,
             instruction_labels=self._instruction_labels,
             variable_labels=self._variable_labels_final,
         )
+
         # Variable definitions always emit exactly one word.
         address = self._instructions_end_address + parsing_result.variable_address
-        value = words[0] & 0xFFFF
+        value = words[0] & 0xFFFF  # Ensure 16-bit word (see "Educational notes" at top of file)
         ram_writes = [RamWrite(address=address, value=value)]
         self._emitted_words.append(value)
 
+        # Advance to the next variable for the next step.
         self._pass2_index += 1
         return self._snapshot(
             current_line_text=parsing_result.new_variable_label,
@@ -383,6 +526,7 @@ class AssemblerStepper:
         highlight_variable_label: str | None = None,
         message: str | None = None,
     ) -> AssemblerSnapshot:
+        """Create a snapshot of the current assembler state."""
         if self._phase == self.PHASE_TRIM:
             current_index = self._trim_index
             pass_number = 0
@@ -393,6 +537,7 @@ class AssemblerStepper:
             current_index = self._pass2_index
             pass_number = 2
 
+        # Spaces added around '=' for better readability.
         return AssemblerSnapshot(
             phase=self._phase,
             pass_number=pass_number,
@@ -414,55 +559,44 @@ class AssemblerStepper:
         )
 
 
-def trim_source(source_lines: list[str]) -> list[str]:
-    """Drop comments and blank lines so line numbering stays compact.
-
-    Allow to focus on the instructions and labels that remain in the
-    trimmed listing without being distracted by trailing comments or empty
-    space. The order is preserved so label resolution stays predictable.
-    """
-    trimmed_lines = []
-    for line in source_lines:
-        line = line.split(";", 1)[0].strip()
-        if line:
-            trimmed_lines.append(line)
-    return trimmed_lines
+### Helper functions for parsing and emitting instructions ###
+# These are outside the stepper class for multiple reasons:
+# 1. They keep the stepper class smaller, easier to read, and focused on state management.
+# 2. They can be tested independently of the stepper state machine.
+# 3. They could be reused in other contexts if needed (although they shouldn't out of this module).
 
 
-def compile(source_lines: list[str]) -> list[int]:
-    """Convert raw assembly text into a contiguous list of machine words.
-
-    This implements the canonical two-pass assembler:
-    1. Scan the program, record label positions, and allocate variable slots
-       without emitting any machine code.
-    2. Revisit the recorded lines to produce the final opcode and operand
-       words once every reference can be resolved.
-
-    Args:
-        source_lines: Assembly text lines including comments and labels.
-
-    Returns:
-        A list of 16-bit integers representing opcodes and operands.
-    """
-    # Keep the old API, but implement it in terms of the stepper.
-    stepper = AssemblerStepper(source_lines)
-    return stepper.run_to_completion()
-
-
-def parse_line(
+def _parse_line(
     line: str, instruction_address: int, variable_address: int
 ) -> ParsingResult:
     """Translate a source line into the parsing record used in both passes.
+    
+    This function handles three main cases:
+    1. Labels followed by instructions (e.g., "LOOP: ADD #5")
+    2. Labels followed by immediate values (e.g., "COUNT: #10")
+    3. Instructions without labels (e.g., "END")
+    
+    Why both addresses? Pass 1 maintains separate counters for instructions
+    (which execute) and variables (which store data). This lets the assembler
+    place variables after instructions in memory, so programs always start at
+    address 0.
 
     Args:
         line: One trimmed source line that may contain a label, instruction, or
             immediate variable definition.
-        instruction_address: Current program counter used for label resolution.
-        variable_address: Slot counter used for consecutive variable storage.
+        instruction_address: Current instruction counter (increments by 1 or 2
+            depending on whether instruction has long operand).
+        variable_address: Current variable slot counter (increments by 1 per
+            variable definition).
 
     Returns:
-        A ParsingResult that records how far instructions/variables advanced and
-        what mnemonic/operand (if any) was found.
+        A ParsingResult that records:
+        - How far instruction/variable addresses advanced (next_address fields)
+        - What mnemonic/operand was found (if any)
+        - Any new label discovered (instruction or variable)
+        
+    Raises:
+        AssemblingError: If line format is invalid or mnemonic is unknown.
     """
     result = ParsingResult(
         instruction_address=instruction_address, variable_address=variable_address
@@ -539,7 +673,7 @@ correct formats:
         raise AssemblingError(f"Invalid line format: '{line}'.")
 
 
-def create_instruction_from_parsing_result(
+def _create_instruction_from_parsing_result(
     parsing_result: ParsingResult,
     instruction_labels: dict[str, int],
     variable_labels: dict[str, int],
@@ -562,7 +696,7 @@ def create_instruction_from_parsing_result(
     """
     result = []
 
-    # Handle variable definitions
+    # Handle variable definitions, and returns early.
     if parsing_result.new_variable_label is not None:
         operand_token = parsing_result.operand_token
         if operand_token is None:
@@ -581,10 +715,10 @@ def create_instruction_from_parsing_result(
             raise AssemblingError(
                 f"Immediate value '{value}' out of range (0 to 65535)."
             )
-        result.append(value & 0xFFFF)
+        result.append(value & 0xFFFF)  # See "Educational notes" at top of file
         return result
 
-    # Handle instructions
+    # If we didn't return early, it's an instruction
     mnemonic = parsing_result.mnemonic
     if mnemonic is None:
         raise AssemblingError("Instruction mnemonic is missing.")
@@ -592,6 +726,11 @@ def create_instruction_from_parsing_result(
     if not instruction_defs:
         raise AssemblingError(f"Unknown instruction mnemonic '{mnemonic}'.")
 
+    # Start by assuming the first definition is correct
+    instruction_def = instruction_defs[0]
+    
+    # If there are multiple definitions for the same mnemonic, we need to
+    # disambiguate based on the operand.
     if len(instruction_defs) > 1:
         # Check for operand to determine correct instruction
         operand_token = parsing_result.operand_token
@@ -612,8 +751,6 @@ def create_instruction_from_parsing_result(
                 if instr_def.addressing_mode != AddressingMode.IMMEDIATE:
                     instruction_def = instr_def
                     break
-    else:
-        instruction_def = instruction_defs[0]
 
     # convert mnemonic to opcode
     opcode = instruction_def.opcode
@@ -621,27 +758,27 @@ def create_instruction_from_parsing_result(
 
     # instruction with no operand
     if instruction_def.addressing_mode == AddressingMode.NONE:
-        result.append(instruction_word & 0xFFFF)
+        result.append(instruction_word & 0xFFFF)  # See "Educational notes" at top of file
         return result
 
     if not instruction_def.long_operand:
-        instruction_word += operand_to_int(
+        instruction_word += _operand_to_int(
             parsing_result.operand_token, instruction_labels, variable_labels
         )
-        result.append(instruction_word & 0xFFFF)
+        result.append(instruction_word & 0xFFFF)  # See "Educational notes" at top of file
     else:
-        result.append(instruction_word & 0xFFFF)
+        result.append(instruction_word & 0xFFFF)  # See "Educational notes" at top of file
         result.append(
-            operand_to_int(
+            _operand_to_int(
                 parsing_result.operand_token, instruction_labels, variable_labels
             )
-            & 0xFFFF
+            & 0xFFFF  # See "Educational notes" at top of file
         )
 
     return result
 
 
-def operand_to_int(
+def _operand_to_int(
     operand_token: str | None,
     instruction_labels: dict[str, int],
     variable_labels: dict[str, int],
