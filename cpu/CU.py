@@ -59,7 +59,7 @@ def create_required_components_for_CU(
         ComponentName.ACC: acc,
         ComponentName.IX: ix,
         ComponentName.ALU: alu,
-        ComponentName.CMP_Flag: cmp_flag,
+        ComponentName.CMP_FLAG: cmp_flag,
         ComponentName.ADDRESS_BUS: address_bus,
         ComponentName.INNER_DATA_BUS: inner_data_bus,
         ComponentName.RAM_ADDRESS: ram_address,
@@ -299,7 +299,7 @@ class CU(CPUComponent):
 
     def _evaluate_condition(self, condition: bool) -> bool:
         # The CMP flag is a single-bit comparison result that RTN steps query.
-        cmp_flag = self.components[ComponentName.CMP_Flag]
+        cmp_flag = self.components[ComponentName.CMP_FLAG]
         return condition == cmp_flag.read()
 
     def _get_dest(self, destination: ComponentName) -> CPUComponent:
