@@ -9,7 +9,7 @@ from common.constants import ComponentName, ControlSignal, WORD_SIZE
 class FlagComponent(CPUComponent):
     """A component that can update status flags based on an ALU result."""
 
-    name: ComponentName = ComponentName.CMP_Flag
+    name: ComponentName = ComponentName.CMP_FLAG
     value = False
 
     def read(self) -> bool:

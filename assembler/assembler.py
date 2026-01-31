@@ -4,9 +4,10 @@ Responsibility:
 - This module tokenizes the teaching assembly language, resolves labels and
 variables, and emits machine words that the CPU simulator can load.
 
-Illustrates CIE 9618: 4.2 Assembly Language:
-- Show understanding of the relationship between assembly language and machine code.
-- Describe the different stages of the assembly process for a two pass assembler.
+Illustrates 
+- CIE 9618: 4.2 Assembly Language:
+    - Show understanding of the relationship between assembly language and machine code.
+    - Describe the different stages of the assembly process for a two pass assembler.
 
 Entry point:
 - The :class:`AssemblerStepper` class, which implements
