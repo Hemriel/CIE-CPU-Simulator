@@ -6,7 +6,7 @@ Responsibility:
 - Act as the single source of truth for enum values and magic numbers used in
   CPU simulation, control logic, memory model, and UI display.
 
-Illustrates
+Illustrates:
 - CIE 9618: 4.1 Central Processing Unit Architecture:
     - Show understanding of the purpose and roles of registers.
     - Show understanding of the purpose and roles of the ALU, CU.
