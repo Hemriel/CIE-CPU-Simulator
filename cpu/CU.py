@@ -357,7 +357,6 @@ class CU(CPUComponent):
             # Keep the CPU simulation robust even if UI metadata isn't available.
             pass
         data = source_comp.read()
-        bus.write(data)
         dest_comp.write(data)
 
     def _handle_conditional_transfer(self, step: ConditionalTransferStep) -> None:
@@ -381,7 +380,6 @@ class CU(CPUComponent):
             except Exception:
                 pass
             address = mar.read()
-            bus.write(address)
             ram_address.write(address)
         else:
             # Data transfer step uses the MDR/RAM data registers depending on the control signal.
@@ -397,7 +395,6 @@ class CU(CPUComponent):
                 except Exception:
                     pass
                 data = mdr.read()
-                bus.write(data)
                 ram_data.write(data)
             else:
                 mdr = self.components[ComponentName.MDR]
@@ -409,7 +406,6 @@ class CU(CPUComponent):
                 except Exception:
                     pass
                 data = ram_data.read()
-                bus.write(data)
                 mdr.write(data)
 
     def _handle_alu_operation(self, step: ALUOperationStep) -> None:
