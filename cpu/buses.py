@@ -6,8 +6,8 @@ Responsibility:
   highlight active data paths.
 - Store the current bus value for display purposes.
 
-CIE 9618 reference:
-- 4.1 Central Processing Unit (CPU) Architecture:
+Illustrates:
+- CIE 9618: 4.1 Central Processing Unit (CPU) Architecture:
     - Show understanding of how data are transferred between various components using the address bus, data bus, and control bus.
 
 Design note:

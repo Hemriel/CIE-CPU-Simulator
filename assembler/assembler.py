@@ -4,10 +4,13 @@ Responsibility:
 - This module tokenizes the teaching assembly language, resolves labels and
 variables, and emits machine words that the CPU simulator can load.
 
-Illustrates 
+Illustrates:
 - CIE 9618: 4.2 Assembly Language:
     - Show understanding of the relationship between assembly language and machine code.
     - Describe the different stages of the assembly process for a two pass assembler.
+- CIE 9618: 13.1 User-defined data types (depper than intended by curriculum, this could serve as a complex example):
+    - Show understanding of why user-defined data types are necessary.
+    - Chose and define an appropriate user defined data type for a given problem.
 
 Entry point:
 - The :class:`AssemblerStepper` class, which implements

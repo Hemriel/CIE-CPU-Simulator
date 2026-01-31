@@ -6,7 +6,7 @@ Responsibility:
 - Provide Register Transfer Notation (RTN) step sequences that describe *how* each
     instruction executes during the fetch-decode-execute cycle.
 
-Illustrates
+Illustrates:
 - CIE 9618: 4.1 Central Processing Unit Architecture:
     - Show understanding of the purpose and roles of registers.
     - Show understanding of the purpose and roles of the ALU, CU.
@@ -15,6 +15,9 @@ Illustrates
 - CIE 9618: 4.2 Assembly Language:
     - Show understanding of and be able to use different modes of addressing.
     - Show understanding that a set of instructions are grouped.
+- CIE 9618: 13.1 User-defined data types (depper than intended by curriculum, this could serve as a complex example):
+    - Show understanding of why user-defined data types are necessary.
+    - Chose and define an appropriate user defined data type for a given problem.
 
 Design notes:
 1. RTN sequences for common addressing modes are defined once (direct, indirect,

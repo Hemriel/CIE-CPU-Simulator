@@ -11,9 +11,12 @@ Design note:
   sets operands and mode, then calls compute() to execute the operation.
 - Results are stored internally until read by register transfers (typically ACC ← ALU).
 
-CIE 9618 reference:
-- 4.1 Central Processing Unit (CPU) Architecture:
+illustrates:
+- CIE 9618: 4.1 Central Processing Unit (CPU) Architecture:
     - Show understanding of the function of the purpose and role of the ALU.
+- CIE 9618: 13.1 User-defined data types (depper than intended by curriculum, this could serve as a complex example):
+    - Show understanding of why user-defined data types are necessary.
+    - Chose and define an appropriate user defined data type for a given problem.
 
 Entry point:
 - The :class:`ALU` class is instantiated by the CPU and driven by the Control Unit.
