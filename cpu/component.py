@@ -1,6 +1,6 @@
 """Common base for every simulated CPU component to share naming and display hooks."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Protocol
 from common.constants import ComponentName
 

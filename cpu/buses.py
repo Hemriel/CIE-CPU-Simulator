@@ -31,20 +31,11 @@ Includes:
 """
 
 from dataclasses import dataclass, field
-from typing import Protocol
 from cpu.component import CPUComponent
 from common.constants import ComponentName, WORD_SIZE, AbnormalComponentUseError
 
 
 ### Educational notes on Python features used in this module ###
-#
-# Protocol (appears in EndPoint class):
-# Protocol is NOT in the curriculum but is a useful Python typing feature.
-# A Protocol defines an interface: any class that has the required methods
-# (get_position in this case) automatically satisfies the protocol without
-# needing to explicitly inherit from it. This is called "structural subtyping"
-# or "duck typing with type hints."
-# More info: https://docs.python.org/3/library/typing.html#typing.Protocol
 #
 # Dataclasses with default_factory (field(default_factory=list)):
 # Dataclasses are NOT in the curriculum but are a convenient way to define
@@ -55,23 +46,6 @@ from common.constants import ComponentName, WORD_SIZE, AbnormalComponentUseError
 # Without default_factory, all Bus instances would share the same list
 # (mutable default argument problem in Python).
 # More info: https://docs.python.org/3/library/dataclasses.html#mutable-default-values
-# 
-
-class EndPoint(Protocol):
-    """Interface for components that can connect to buses for visualization.
-    
-    Any component that implements get_position() can be used as a bus endpoint.
-    This allows the UI to draw connections between components along the bus paths.
-    """
-
-    def get_position(self) -> tuple[int, int]: # type: ignore (some type checkers might complain about return type)
-        """Return the layout position used for highlighting a bus connection.
-        
-        Returns:
-            A tuple of (line, column) indicating where the component sits in the UI layout.
-        """
-        pass
-
 
 @dataclass
 class Bus(CPUComponent):
@@ -87,8 +61,6 @@ class Bus(CPUComponent):
     """
 
     name: ComponentName
-    sources: list[EndPoint] = field(default_factory=list)
-    sink: EndPoint | None = None
     active: bool = False
 
     # UI-only metadata describing the last logical connection(s) driven on this bus.
