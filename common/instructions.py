@@ -152,8 +152,6 @@ class RegOperationStep(RTNStep):
 # For direct and indirect addressing, we need to fetch the operand from memory.
 #   Each adds a memory access sequence on top of the previous mode.
 # For indexed addressing, we add the index register to the effective address.
-# TODO: Confirm whether the indirect/indexed templates should include a MAR <- operand
-#       transfer or assume MDR already holds the effective address.
 direct_addressing_RTNSteps = [
     SimpleTransferStep(source=ComponentName.MDR, destination=ComponentName.MAR),
     MemoryAccessStep(),

@@ -26,7 +26,7 @@ Entry point:
 - Import as needed: from common.constants import ComponentName, AddressingMode, etc.
 
 Includes:
-- Exception classes: :class:`MissingComponentError`, :class:`AssemblingError`
+- Exception classes: :class:`MissingComponentError`, :class:`AssemblingError`, class:`AbnormalComponentUseError`
 - Addressing mode enum: :class:`AddressingMode` (defines all CIE addressing modes)
 - Component labels: :class:`ComponentName` (registers, buses, and control units)
 - Register index mapping: :data:`RegisterIndex` (register name -> operand index)
@@ -65,6 +65,9 @@ class AssemblingError(Exception):
     """Raised when an error occurs during assembly of source code."""
     pass
 
+class AbnormalComponentUseError(Exception):
+    """Raised when a CPU component is used in an unexpected or incorrect way."""
+    pass
 
 class AddressingMode(StrEnum):
     """Defines every addressing mode that the CIE spec calls out.
