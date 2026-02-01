@@ -746,6 +746,20 @@ All implementation decisions must be validated against:
    - Acceptable answers to common questions (e.g., "describe how SUB instruction is executed")
    - Ensures simulator behavior matches examiner expectations
 
+## Glossary of CIE Terms (For Consistency)
+
+| Term | Abbreviation | Role |
+|------|--------------|------|
+| Program Counter | PC | Holds address of next instruction |
+| Memory Address Register | MAR | Holds address for memory access |
+| Memory Data Register | MDR | Holds data to/from memory |
+| Current Instruction Register | CIR | Holds fetched instruction (opcode + operand) |
+| Accumulator | ACC | Main working register for ALU operations |
+| Index Register | IX | Holds offset for indexed addressing |
+| Status Register | SR | Holds condition flags (Z, N, C, V, etc.) |
+| Control Unit | CU | Orchestrates fetch-decode-execute |
+| Arithmetic Logic Unit | ALU | Performs arithmetic and logic operations |
+
 ---
 
 ## Sources & References

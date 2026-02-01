@@ -1,6 +1,6 @@
 # Code Review Guidelines for CPU_Sim
 
-This document outlines review criteria specific to CPU_Sim. It complements the main [copilot-instructions.md](../../.github/copilot-instructions.md) with a focus on code review practices.
+This document outlines review criteria specific to CPU_Sim.
 
 ## Guiding Principle
 
@@ -65,7 +65,7 @@ def calculate_effective_address(base_address: int, offset: int) -> int:
 
 ## CIE Terminology and Naming Conventions
 
-All code must use CIE terminology consistently. Refer to the [Glossary in copilot-instructions.md](../../.github/copilot-instructions.md#glossary-of-cie-terms-for-consistency) for standard abbreviations and terms.
+All code must use CIE terminology consistently. Refer to the [Glossary in CIE specs.md](../.design/CIE_specs.md#glossary-of-cie-terms-for-consistency) for standard abbreviations and terms.
 
 **Standards:**
 
@@ -101,13 +101,6 @@ Type hints should be used throughout the codebase for clarity:
 - Class attributes should have type hints (preferably in `__init__`)
 - Use descriptive types: prefer `int` over vague types; use custom types or TypedDict for structured data
 - Type hints serve as documentation and help students understand expected data flows
-
-**Example:**
-
-```python
-def fetch_instruction(self) -> int:
-    """Fetch the instruction at the current PC address."""
-```
 
 ## Function Design and Complexity
 
@@ -145,7 +138,7 @@ Although code should avoid unnecessary repetition, **clarity takes priority**:
 
 ## CIE Specification Alignment
 
-Every significant feature must be traceable back to [.design/CIE specs.md](CIE%20specs.md):
+Every significant feature must be traceable back to [.design/CIE_specs.md](CIE_specs.md):
 
 - Variable and function names should use CIE terminology
 - Algorithms (fetch-decode-execute, two-pass assembly, addressing modes) must match CIE specifications exactly
@@ -191,6 +184,6 @@ For interface code:
 
 ---
 
-**Last Updated**: January 2026  
+**Last Updated**: February 2026  
 **Audience**: Code reviewers, contributors  
 **Scope**: Code review practices for CPU_Sim

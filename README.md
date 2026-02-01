@@ -125,7 +125,7 @@ Detailed curriculum references are embedded in code comments and module docstrin
 Launch the interactive interface:
 
 ```bash
-python main.py
+python CIE_CPU_Sim.py
 ```
 
 **Controls:**
