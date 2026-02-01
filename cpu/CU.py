@@ -10,8 +10,16 @@ Responsibility:
 - Manage cycle phases (FETCH, DECODE, EXECUTE) and transition between them as
   RTN sequences complete.
 
-- TODO (CIE 9618): reference sections on the control unit, RTN, and the fetch-
-  decode-execute cycle.
+Illustrates:
+- CIE 9618: 4.1 Central Processing Unit (CPU) Architecture:
+    - Show understanding of the purpose and roles of the ALU, CU.
+    - Show understanding of how data are transferred between various components using the address bus, data bus, and control bus.
+    - Describe the stages of the fetch-decode-execute cycle.
+- CIE 9618: 4.2 Assembly Language:
+    - Show understanding of the relationship between assembly language and machine code.
+- CIE 9618: 9.1 Computational Thinking Skills:
+    - Show an understanding of abstraction (RTN as abstraction of control signals).
+    - Describe and use decomposition (fetch-decode-execute as distinct phases).
 
 Design choices:
 - The CU models hardware control signals as RTN steps (SimpleTransferStep,

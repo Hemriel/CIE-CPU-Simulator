@@ -6,7 +6,8 @@ Responsibility:
 
 Illustrates:
 - CIE 9618: 1.1 Data representation:
-    - Show understanding of and be able to represent data in it's internal binary form.
+    - Show understanding of different number systems (binary, denary, hexadecimal).
+    - Show understanding and be able to represent character data in its internal binary form (ASCII).
 
 Design choices:
 - Uses a string-based queue for simplicity and student-readability.

@@ -13,8 +13,12 @@ Illustrates:
     - Show understanding of how data are transferred between various components using buses.
     - Describe stages of the fetch-decode-execute cycle.
 - CIE 9618: 4.2 Assembly Language:
+    - Show understanding of the relationship between assembly language and machine code.
     - Show understanding of and be able to use different modes of addressing.
     - Show understanding that a set of instructions are grouped.
+    - Trace a given simple assembly language program.
+- CIE 9618: 4.3 Bit Manipulation:
+    - Show understanding of and perform binary shifts (implemented via ControlSignal and ALU).
 - CIE 9618: 13.1 User-defined data types (depper than intended by curriculum, this could serve as a complex example):
     - Show understanding of why user-defined data types are necessary.
     - Chose and define an appropriate user defined data type for a given problem.

@@ -14,6 +14,9 @@ Illustrates:
     - Describe stages of the fetch-decode-execute cycle.
 - CIE 9618: 4.2 Assembly Language:
     - Show understanding of and be able to use different modes of addressing.
+    - Show understanding that a set of instructions are grouped.
+- CIE 9618: 4.3 Bit Manipulation:
+    - Show understanding of binary shifts (represented in ControlSignal enum).
 
 Design note:
 - Keeping all constant strings in one place makes it much less likely a typo

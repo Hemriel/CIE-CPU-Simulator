@@ -10,9 +10,13 @@ Responsibility:
 
 Illustrates:
 - CIE 9618: 4.1 Central Processing Unit Architecture:
+    - Show understanding of the basic Von Neumann model for a computer system and the stored program concept.
     - Show understanding of the purpose and roles of registers.
     - Show understanding of the purpose and roles of the ALU, CU.
     - Show understanding of how data are transferred between various components using buses.
+- CIE 9618: 9.1 Computational Thinking Skills:
+    - Show an understanding of abstraction (CPU as a unified interface over component complexity).
+    - Describe and use decomposition (CPU built from modular components).
 
 Design choices:
 - The CPU class owns all components and passes references to the Control Unit,

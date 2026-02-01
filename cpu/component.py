@@ -5,6 +5,11 @@ Responsibility:
     (naming, read/write behavior, and display refresh hooks).
 
 Illustrates:
+- CIE 9618: 9.1 Computational Thinking Skills:
+    - Show an understanding of abstraction (component interfaces as abstraction layer).
+    - Describe and use decomposition (breaking CPU into modular components).
+- CIE 9618: 10.4 Introduction to Abstract Data Types:
+    - Show understanding that an ADT is a collection of data and a set of operations on those data.
 - CIE 9618: 12.3 Program testing and maintenance:
     - Show understanding of the methods of testing available and select appropriate data for a given method.
     - Show understanding of the need for a test strategy and test plan and their likely content.

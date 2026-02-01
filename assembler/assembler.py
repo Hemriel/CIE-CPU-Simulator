@@ -8,6 +8,11 @@ Illustrates:
 - CIE 9618: 4.2 Assembly Language:
     - Show understanding of the relationship between assembly language and machine code.
     - Describe the different stages of the assembly process for a two pass assembler.
+    - Trace a given simple assembly language program.
+    - Show understanding that a set of instructions are grouped.
+    - Show understanding of and be able to use different modes of addressing.
+- CIE 9618: 5.2 Language Translators:
+    - Show understanding of the need for the translation of an assembly language program.
 - CIE 9618: 13.1 User-defined data types (depper than intended by curriculum, this could serve as a complex example):
     - Show understanding of why user-defined data types are necessary.
     - Chose and define an appropriate user defined data type for a given problem.
