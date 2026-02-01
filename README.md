@@ -165,45 +165,46 @@ Press `Ctrl+S` to compile, then press `T` repeatedly to step through assembly an
 
 ```
 CPU_Sim/
-├── .github/
-│   └── copilot-instructions.md   # Coding standards and guidelines
 ├── .design/
-│   ├── CIE specs.md              # Detailed CIE specification notes
-│   ├── review.md                 # Code review results
-│   └── review_pointers.md        # Code review guidelines
+│   ├── CIE_specs.md              # Detailed CIE specification notes
+│   ├── references.md             # list of curriculum points illustrated
+│   ├── review_pointers.md        # Code review guidelines
+│   └── review.md                 # Code review results
 ├── assembler/
-│   ├── __init__.py
 │   └── assembler.py              # Two-pass assembler with stepper
+├── common/
+│   ├── constants.py              # Shared enums and constants
+│   └── instructions.py           # Instruction metadata and RTN sequences
 ├── cpu/
-│   ├── __init__.py
 │   ├── ALU.py                    # Arithmetic Logic Unit
 │   ├── buses.py                  # Address and data bus models
 │   ├── component.py              # Base component protocol
+│   ├── cpu_io.py                 # I/O components (IN/OUT)
 │   ├── cpu.py                    # Top-level CPU class
 │   ├── CU.py                     # Control Unit (fetch-decode-execute)
 │   ├── RAM.py                    # Memory model
-│   ├── register.py               # Register implementation
-│   └── cpu_io.py                 # I/O components (IN/OUT)
-├── common/
-│   ├── __init__.py
-│   ├── constants.py              # Shared enums and constants
-│   └── instructions.py           # Instruction metadata and RTN sequences
-├── ui/
-│   ├── __init__.py
-│   ├── CPUDisplayer.py           # Main CPU display layout
+│   └── register.py               # Register implementation
+├── interface/
 │   ├── alu_display.py            # ALU visualization
+│   ├── bus_ascii.py              # ASCII-art bus visualization
 │   ├── control_unit_display.py   # Control Unit visualization
-│   ├── register_display.py       # Register display widget
+│   ├── CPUDisplayer.py           # Main CPU display layout
+│   ├── instruction_label_display.py # Instruction and variable label tables
+│   ├── internal_bus_display.py   # Internal bus visualization
+│   ├── IO_display.py             # I/O queue visualization
+│   ├── outer_bus_display.py      # External bus visualization
 │   ├── ram_display.py            # Memory display widget
-│   └── editor.py                 # Assembly code editor
+│   ├── register_display.py       # Register display widget
+│   ├── styles.tcss               # Textual styles
+│   ├── TickerController.py       # Stepper control logic
+│   ├── variable_label_display.py # Variable label table
+│   └── vspacer.py                # vertical spacer widget
 ├── examples/
 │   ├── fibo.txt                  # Example Fibonacci program
 │   └── fibo2.txt                 # Additional example
 ├── tests/
-│   ├── test_assembler.py
-│   ├── test_cpu.py
-│   └── test_integration.py
-├── main.py                       # Application entry point
+│   └── TODO
+├── CIE_CPU_Sim.py                # Application entry point
 ├── requirements.txt              # Project dependencies
 ├── LICENSE                       # MIT License
 └── README.md                     # This file
@@ -220,7 +221,7 @@ If you're curious about **how this works under the hood**, the codebase is desig
    - Notice the stepper pattern: each `step()` call performs one small operation
    - Read the docstrings to understand *why* two passes are needed
 
-2. **Explore [`cpu/CU.py`](cpu/CU.py)** (Control Unit):
+2. **Explore [`cpu/CU.py`](cpu/CU.py) (Control Unit)**:
    - Watch how fetch-decode-execute is implemented as a state machine
    - See RTN steps as data (not code)—each step describes *what* should happen
    - Understand the dispatcher pattern: RTN step types → handler methods
@@ -229,7 +230,7 @@ If you're curious about **how this works under the hood**, the codebase is desig
    - Instructions are defined as metadata (opcode, addressing mode, RTN sequence)
    - The Control Unit *interprets* this metadata, just like real hardware
 
-4. **Look at [`cpu/register.py`](cpu/register.py)** or [`cpu/ALU.py`](cpu/ALU.py)**:
+4. **Look at [`cpu/register.py`](cpu/register.py) or [`cpu/ALU.py`](cpu/ALU.py)**:
    - Simple, focused components with clear responsibilities
    - Dataclasses reduce boilerplate while keeping code readable
 
@@ -239,21 +240,7 @@ If you're curious about **how this works under the hood**, the codebase is desig
 
 ## 🧪 Testing
 
-Run the test suite to validate assembler and CPU behavior:
-
-```bash
-pytest tests/ -v
-```
-
-**Current test coverage:**
-
-- Assembler trim, pass 1, and pass 2 phases
-- Label resolution and forward references
-- All addressing modes (immediate, direct, indirect, indexed)
-- Instruction emission and RAM writes
-- Error handling for syntax errors and undefined labels
-
-See [`tests/`](tests/) directory for detailed test specifications.
+TODO
 
 ---
 
@@ -268,10 +255,9 @@ Contributions are welcome, especially:
 
 **Before contributing:**
 
-1. Read [`.github/copilot-instructions.md`](.github/copilot-instructions.md) for coding standards
-2. Review [`.design/review_pointers.md`](.design/review_pointers.md) for code review guidelines
-3. Ensure changes align with the **educational mission** (clarity over cleverness)
-4. Follow the CIE terminology and RTN notation established in existing code
+1. Review [`.design/review_pointers.md`](.design/review_pointers.md) for code review guidelines
+2. Ensure changes align with the **educational mission** (clarity over cleverness)
+3. Follow the CIE terminology and RTN notation established in existing code
 
 ---
 
@@ -283,7 +269,7 @@ CPU_Sim is based on:
 - **SaveMyExams CIE A Level Computer Science Revision Notes**
 - **CIE-accredited workbooks and teaching materials**
 
-See [`.design/CIE specs.md`](.design/CIE%20specs.md) for detailed specification notes.
+See [`.design/CIE_specs.md`](.design/CIE_specs.md) for detailed specification notes.
 
 ---
 
@@ -306,7 +292,7 @@ This project is licensed under the MIT License. See [`LICENSE`](LICENSE) for det
 ## ⚡ Quick Start Summary
 
 1. Install Python 3.10+ and dependencies (`pip install -r requirements.txt`)
-2. Run `python main.py`
+2. Run `python CIE_CPU_Sim.py`
 3. Write or load assembly code in the editor
 4. Press `Ctrl+S` to compile, then `T` to step through execution
 5. Watch the magic happen! ✨
