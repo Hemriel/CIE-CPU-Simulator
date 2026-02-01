@@ -244,6 +244,20 @@ TODO
 
 ---
 
+## 🛠️ Roadmap (ordered by priority)
+
+- [ ] Add missing documentation(display modules not documented yet)
+- [ ] Fix second pass display not highlighting source code lines
+- [ ] Fix hotkeys not displaying in footer
+- [ ] Allow user to switch between numbering systems
+- [ ] Add autorun mode with speed control
+- [ ] Allow user to edit Input queue contents
+- [ ] Block execution when waiting for IN and Input queue is empty
+- [ ] Implement test suite with coverage reports
+- [ ] Save/load assembly programs from files
+
+---
+
 ## 🤝 Contributing
 
 Contributions are welcome, especially:
@@ -278,6 +292,12 @@ See [`.design/CIE_specs.md`](.design/CIE_specs.md) for detailed specification no
 This project is licensed under the MIT License. See [`LICENSE`](LICENSE.txt) for details.
 
 **In summary:** You can use, modify, and distribute this code freely (even commercially) as long as you include the original copyright notice and license.
+
+---
+
+## 🛠️ AI use
+
+This project has utilized AI tools (GitHub Copilot) to assist with code generation and documentation. All AI-generated content has been reviewed and modified by human contributors to ensure accuracy, clarity, and alignment with educational goals.
 
 ---
 
