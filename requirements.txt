@@ -1,0 +1,5 @@
+# Core dependencies for CPU_Sim
+
+# Terminal UI framework for interactive visualization
+textual>=0.47.0
+
