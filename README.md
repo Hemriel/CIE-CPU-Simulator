@@ -275,7 +275,7 @@ See [`.design/CIE_specs.md`](.design/CIE_specs.md) for detailed specification no
 
 ## 📜 License
 
-This project is licensed under the MIT License. See [`LICENSE`](LICENSE) for details.
+This project is licensed under the MIT License. See [`LICENSE`](LICENSE.txt) for details.
 
 **In summary:** You can use, modify, and distribute this code freely (even commercially) as long as you include the original copyright notice and license.
 
