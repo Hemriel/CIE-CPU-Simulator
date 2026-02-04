@@ -425,7 +425,7 @@ class AssemblerStepper:
         return self._snapshot(
             current_line_text=None,
             ram_writes=[],
-            cursor_row=None,
+            cursor_row=max(0, self._pass1_index - 1),
             message="Pass 1 finalised. Starting pass 2...",
         )
 
@@ -444,6 +444,7 @@ class AssemblerStepper:
         Returns:
             An AssemblerSnapshot reflecting the updated state after emission.
         """
+        instruction_offset: int = len(self._pass2_variable_results)
 
         # Guard against running past the end of the instruction results.
         if self._pass2_index >= len(self._pass2_instruction_results):
@@ -451,6 +452,7 @@ class AssemblerStepper:
             self._pass2_index = 0
             return self._snapshot(
                 current_line_text=None,
+                cursor_row=max(0, self._pass2_index - 1 + instruction_offset),
                 ram_writes=[],
                 message="Instructions emitted. Emitting variables...",
             )
@@ -458,7 +460,7 @@ class AssemblerStepper:
         # Turn the next ParsingResult into machine words.
         # Some instructions emit one word; others emit two.
         parsing_result = self._pass2_instruction_results[self._pass2_index]
-        words = _create_instruction_from_parsing_result(
+        words, looked_at_instruction, looked_at_variable = _create_instruction_from_parsing_result(
             parsing_result,
             instruction_labels=self._instruction_labels,
             variable_labels=self._variable_labels_final,
@@ -479,7 +481,9 @@ class AssemblerStepper:
         return self._snapshot(
             current_line_text=parsing_result.mnemonic,
             ram_writes=ram_writes,
-            cursor_row=None,
+            cursor_row=max(0, self._pass2_index - 1 + instruction_offset),
+            highlight_instruction_label=looked_at_instruction,
+            highlight_variable_label=looked_at_variable,
             message="Pass 2: emitting instructions...",
         )
 
@@ -497,12 +501,15 @@ class AssemblerStepper:
         if self._pass2_index >= len(self._pass2_variable_results):
             self._phase = self.PHASE_DONE
             return self._snapshot(
-                current_line_text=None, ram_writes=[], message="Assembling complete."
+                current_line_text=None, 
+                ram_writes=[], 
+                cursor_row=max(0, self._pass2_index - 1), 
+                message="Assembling complete."
             )
 
         # Turn the next ParsingResult into machine words.
         parsing_result = self._pass2_variable_results[self._pass2_index]
-        words = _create_instruction_from_parsing_result(
+        words, _, _ = _create_instruction_from_parsing_result(
             parsing_result,
             instruction_labels=self._instruction_labels,
             variable_labels=self._variable_labels_final,
@@ -519,7 +526,7 @@ class AssemblerStepper:
         return self._snapshot(
             current_line_text=parsing_result.new_variable_label,
             ram_writes=ram_writes,
-            cursor_row=None,
+            cursor_row=max(0, self._pass2_index - 1),
             highlight_variable_label=parsing_result.new_variable_label,
             message="Pass 2: emitting variables...",
         )
@@ -686,7 +693,7 @@ def _create_instruction_from_parsing_result(
     parsing_result: ParsingResult,
     instruction_labels: dict[str, int],
     variable_labels: dict[str, int],
-) -> list[int]:
+) -> tuple[list[int], str | None, str | None]:
     """Emit the machine word(s) for a single parsing result.
 
     Variables are converted to their immediate values while instructions are
@@ -701,12 +708,16 @@ def _create_instruction_from_parsing_result(
         variable_labels: Mapping from variable labels to absolute addresses.
 
     Returns:
-        One or two words representing the instruction plus optional operand.
+        One or two words representing the instruction plus optional operand,
+        plus optionally the instruction label and variable label looked at.
     """
     result = []
+    looked_at_instruction = None
+    looked_at_variable = None
 
     # Handle variable definitions, and returns early.
     if parsing_result.new_variable_label is not None:
+        looked_at_variable = parsing_result.new_variable_label
         operand_token = parsing_result.operand_token
         if operand_token is None:
             raise AssemblingError("Variable definition missing value.")
@@ -725,7 +736,7 @@ def _create_instruction_from_parsing_result(
                 f"Immediate value '{value}' out of range (0 to 65535)."
             )
         result.append(value & 0xFFFF)  # See "Educational notes" at top of file
-        return result
+        return result, None, looked_at_variable
 
     # If we didn't return early, it's an instruction
     mnemonic = parsing_result.mnemonic
@@ -768,30 +779,29 @@ def _create_instruction_from_parsing_result(
     # instruction with no operand
     if instruction_def.addressing_mode == AddressingMode.NONE:
         result.append(instruction_word & 0xFFFF)  # See "Educational notes" at top of file
-        return result
+        return result, None, None
 
+    operand, looked_at_instruction, looked_at_variable = _operand_to_int(
+        parsing_result.operand_token, instruction_labels, variable_labels
+    ) 
     if not instruction_def.long_operand:
-        instruction_word += _operand_to_int(
-            parsing_result.operand_token, instruction_labels, variable_labels
-        )
+        instruction_word += operand
         result.append(instruction_word & 0xFFFF)  # See "Educational notes" at top of file
     else:
         result.append(instruction_word & 0xFFFF)  # See "Educational notes" at top of file
         result.append(
-            _operand_to_int(
-                parsing_result.operand_token, instruction_labels, variable_labels
-            )
+            operand
             & 0xFFFF  # See "Educational notes" at top of file
         )
 
-    return result
+    return result, looked_at_instruction, looked_at_variable
 
 
 def _operand_to_int(
     operand_token: str | None,
     instruction_labels: dict[str, int],
     variable_labels: dict[str, int],
-) -> int:
+) -> tuple[int, str | None, str | None]:
     """Resolve an operand token into a 16-bit value.
 
     The operand could be an immediate literal, a label that points to code/data,
@@ -803,8 +813,11 @@ def _operand_to_int(
         variable_labels: Label -> address map for variables.
 
     Returns:
-        The resolved 16-bit integer value to embed in the instruction.
+        The resolved 16-bit integer value to embed in the instruction,
+        plus optionally the instruction label and variable label looked at.
     """
+    looked_at_instruction = None
+    looked_at_variable = None
     if operand_token is None:
         raise AssemblingError("Operand is missing.")
     if operand_token.startswith("#"):
@@ -815,8 +828,10 @@ def _operand_to_int(
         value = int(operand_token[1:], 16)
     elif operand_token in instruction_labels:
         value = instruction_labels[operand_token]
+        looked_at_instruction = operand_token
     elif operand_token in variable_labels:
         value = variable_labels[operand_token]
+        looked_at_variable = operand_token
     elif operand_token in [
         ComponentName.ACC,
         ComponentName.IX,
@@ -830,4 +845,4 @@ def _operand_to_int(
         raise AssemblingError(f"Unknown operand or label '{operand_token}'.")
     if not (0 <= value <= 0xFFFF):
         raise AssemblingError(f"Operand value '{value}' out of range (0 to 65535).")
-    return value
+    return value, looked_at_instruction, looked_at_variable

@@ -76,7 +76,7 @@ class CPUInterfaceApp(App):
 
             # Keep the modified line in view.
             if snapshot.cursor_row is not None:
-                self.code_editor.move_cursor((max(0, snapshot.cursor_row), 0))
+                self.code_editor.select_line(max(0, snapshot.cursor_row))
                 self.code_editor.scroll_cursor_visible(center=True)
 
             self.instruction_labels_display.update_labels(
