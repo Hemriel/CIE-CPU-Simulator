@@ -783,23 +783,21 @@ class CU(CPUComponent):
             step: The RegOperationStep specifying INC/DEC, destination, and optional source.
         """
         # Get the target register (may be indexed via operand).
-        reg_comp = self._get_dest(step.destination)
+        reg_comp : Register = self._get_dest(step.destination) # type: ignore _get_dest return a generic CPUComponent, but here we know it's a Register
         reg_comp.set_last_active(True)
 
         # Determine the offset (default 1, or value from source register).
         offset = 1
         if step.source:
-            source_comp = self.components[step.source]
+            source_comp : Register = self.components[step.source] # type: ignore _get_dest return a generic CPUComponent, but here we know it's a Register
             source_comp.set_last_active(True)
             offset = source_comp.read()
 
         # Perform the operation.
         if step.control == ControlSignal.INC:
-            value = reg_comp.read()
-            reg_comp.write(value + offset)
+            reg_comp.inc(offset)
         elif step.control == ControlSignal.DEC:
-            value = reg_comp.read()
-            reg_comp.write(value - offset)
+            reg_comp.dec(offset)
 
     def __repr__(self) -> str:
         """Return a string representation of the CU state for debugging.

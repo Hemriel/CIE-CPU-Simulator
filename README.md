@@ -12,6 +12,7 @@ An educational CPU simulator and assembler designed to support CIE IGCSE, AS, an
 - There is **no guarantee** that all implementation details perfectly match CIE specifications
 - The simulated CPU **does not reflect any real-world CPU architecture**—it is a simplified model designed for teaching purposes
 - The tool adheres to available reference documentation published by Cambridge International and CIE-accredited workbooks, but interpretations may vary
+- The level of detail to which the CIE syllabus is scoped is not consistent. Therefore, some implementation choices were made to balance educational clarity with technical accuracy. (eg, long operand being store in the following memory address, operational details of the decode phase, etc.)
 
 **About code quality:**
 
@@ -249,6 +250,7 @@ TODO
 - [ ] Add missing documentation(display modules not documented yet)
 - [ ] Fix second pass display not highlighting source code lines
 - [ ] Fix hotkeys not displaying in footer
+- [ ] Fix control signal labeling on register not displaying "inc"/"dec"
 - [ ] Allow user to switch between numbering systems
 - [ ] Add autorun mode with speed control
 - [ ] Allow user to edit Input queue contents
@@ -303,7 +305,7 @@ This project has utilized AI tools (GitHub Copilot) to assist with code generati
 
 ## 🙏 Acknowledgments
 
-- **Cambridge International Examinations** for the excellent syllabus and teaching resources
+- **Cambridge International Examinations** for the extensive work they put into the syllabus and teaching resources
 - **SaveMyExams** for clear, student-friendly explanations of CPU architecture
 - **The Python community** for Textual and other open-source libraries that made this possible
 
