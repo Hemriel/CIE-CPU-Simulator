@@ -1,23 +1,37 @@
-"""Textual widget for displaying instruction label addresses.
+"""Visual display component for instruction label addresses from the assembler.
 
-This is used by the interactive assembler view so students can watch pass 1 fill
-out the instruction label table in real time.
+Responsibility:
+- Display instruction label mappings produced by the assembler stepper.
+- Highlight the most recently updated label during pass 1.
+
+Entry point:
+- :class:`InstructionLabelDisplay`: Table widget updated by assembler snapshots.
+
+Design choices:
+- This display is driven by assembler output, not by a direct back end component.
+    The assembler stepper produces label tables, and the UI renders them.
+- The display formats the mapping for visualization but performs no assembly logic.
 """
 
-from __future__ import annotations
-
+# textual specific imports. For more information, see https://textual.textualize.io/
 from textual.widgets import DataTable
 
 
 class InstructionLabelDisplay(DataTable):
-    """A simple table mapping instruction labels to their resolved addresses."""
+    """Visual widget that displays instruction label mappings.
+
+    Shows label names with their current decimal and hexadecimal addresses,
+    and optionally highlights a label that was just updated.
+    """
 
     def __init__(self) -> None:
+        """Create an instruction label display table."""
         super().__init__()
         self.border_title = "Instruction Labels"
         self.cursor_type = "row"
 
     def on_mount(self) -> None:
+        """Initialize the table columns and empty state."""
         self.add_column("Label")
         self.add_column("Dec")
         self.add_column("Hex")
@@ -28,6 +42,7 @@ class InstructionLabelDisplay(DataTable):
 
         Args:
             labels: Mapping from label name to absolute instruction address.
+            highlight: Optional label name to highlight in the table.
         """
 
         if labels:

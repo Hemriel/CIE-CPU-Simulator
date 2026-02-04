@@ -1,26 +1,37 @@
-"""Textual widget for displaying variable label addresses.
+"""Visual display component for variable label addresses from the assembler.
 
-During pass 1 variables are allocated sequential "slots". After pass 1 is
-finalised, those slots are converted into absolute RAM addresses by placing
-variables after the instruction area.
+Responsibility:
+- Display variable label mappings produced by the assembler stepper.
+- Highlight the most recently updated label during pass 1 or pass 2.
 
-This widget shows the current mapping so students can see it evolve.
+Entry point:
+- :class:`VariableLabelDisplay`: Table widget updated by assembler snapshots.
+
+Design choices:
+- This display is driven by assembler output, not by a direct back end component.
+    The assembler stepper produces label tables, and the UI renders them.
+- The display formats the mapping for visualization but performs no assembly logic.
 """
 
-from __future__ import annotations
-
+# textual specific imports. For more information, see https://textual.textualize.io/
 from textual.widgets import DataTable
 
 
 class VariableLabelDisplay(DataTable):
-    """A simple table mapping variable labels to their current addresses."""
+    """Visual widget that displays variable label mappings.
+
+    Shows label names with their current decimal and hexadecimal addresses,
+    and optionally highlights a label that was just updated.
+    """
 
     def __init__(self) -> None:
+        """Create a variable label display table."""
         super().__init__()
         self.border_title = "Variable Labels"
         self.cursor_type = "row"
 
     def on_mount(self) -> None:
+        """Initialize the table columns and empty state."""
         self.add_column("Label")
         self.add_column("Dec")
         self.add_column("Hex")
@@ -31,6 +42,7 @@ class VariableLabelDisplay(DataTable):
 
         Args:
             labels: Mapping from variable label name to its current address.
+            highlight: Optional label name to highlight in the table.
         """
 
         if labels:

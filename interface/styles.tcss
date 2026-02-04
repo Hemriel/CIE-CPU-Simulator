@@ -1,3 +1,10 @@
+/* This file sets up display attributes for most elements.
+This is not in the curriculum, and isn't native to python either.
+It actually follows rules set up by the textual module.
+For more information:
+https://textual.textualize.io/guide/CSS/ */
+
+/* the specifically  */
 #code-editor {
     width: 30;
     height: 100%;
