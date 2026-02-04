@@ -1,14 +1,41 @@
-from cpu.CU import CU
+"""Visual display component for the Control Unit (CU) state.
 
+Responsibility:
+- Display the CU's current instruction, decoded assembly, RTN step, and phase.
+- Highlight when the CU is active vs. idle during execution.
+
+Entry point:
+- :class:`ControlUnitDisplay`: Main widget bound to a CU instance.
+
+Design choices:
+- The back end CU component doesn't know about the UI; instead, it uses a
+    displayer hook to notify the UI when its state changes.
+- The ControlUnitDisplay formats CU state for visualization, but performs no
+    control logic itself and waits for the CU to request display updates.
+"""
+
+from cpu.CU import CU  # the displayer needs to know about the CU it displays
+
+# textual specific imports. For more information, see https://textual.textualize.io/
 from textual.app import ComposeResult
 from textual.widgets import Label
 from textual.containers import Vertical, Horizontal
 
 
 class ControlUnitDisplay(Vertical):
-    """Minimal CU widget that mirrors the current instruction and RTN step."""
+    """Visual widget that displays CU state during execution.
+
+    Shows the current instruction, decoded assembly text, RTN step, and phase.
+    The display updates whenever the CU state changes and highlights active
+    vs. idle periods.
+    """
 
     def __init__(self, cu: CU) -> None:
+        """Create a CU display bound to the given CU instance.
+
+        Args:
+            cu: The control unit component to visualize.
+        """
         super().__init__()
         self.id = "control-unit-display"
         self.border_title = "CU"
@@ -23,6 +50,7 @@ class ControlUnitDisplay(Vertical):
         self.cu = cu
 
     def compose(self) -> ComposeResult:
+        """Build the widget layout with instruction/phase rows."""
         with Horizontal():
             yield self.instr_label
             yield self.inst_value
@@ -38,11 +66,20 @@ class ControlUnitDisplay(Vertical):
         self.update_display()
 
     def update_display(self) -> None:
-        cu = self.cu
+        """Refresh the display with current CU state.
+
+        Updates the current instruction, assembly string, RTN step, and phase,
+        and applies active/idle styling.
+        """
+        cu = self.cu 
+
+        # Apply active/inactive styling based on RTN step participation
         if cu.last_active:
             self.remove_class("inactive")
         else:
             self.add_class("inactive")
+        
+        # Update displayed values
         instruction = cu.current_instruction or "None"
         rtn_step = cu.current_RTNStep or "Idle"
         phase = getattr(cu.current_phase, "name", cu.current_phase)

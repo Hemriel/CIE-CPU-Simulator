@@ -250,7 +250,7 @@ TODO
 - [ ] Add missing documentation(display modules not documented yet)
 - [ ] Fix second pass display not highlighting source code lines
 - [ ] Fix hotkeys not displaying in footer
-- [ ] Fix control signal labeling on register not displaying "inc"/"dec"
+- [x] Fix control signal labeling on register not displaying "inc"/"dec"
 - [ ] Allow user to switch between numbering systems
 - [ ] Add autorun mode with speed control
 - [ ] Allow user to edit Input queue contents
