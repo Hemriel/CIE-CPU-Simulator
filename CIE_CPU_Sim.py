@@ -1,3 +1,47 @@
+"""Main Textual application for the CIE CPU simulator.
+
+Responsibility:
+- Create and configure the primary user interface that integrates the assembler UI,
+  CPU component displays, and execution controls.
+- Manage the application lifecycle, user input handling, and coordinate between
+  the assembler stepper and CPU simulator.
+- Provide the main entry point for users to write, compile, and execute assembly
+  programs with real-time visualization of the two-pass assembly process and
+  fetch-decode-execute cycle.
+
+Illustrates:
+- CIE 9618: 4.2 Assembly Language:
+    - Show understanding of the relationship between assembly language and machine code.
+    - Describe the different stages of the assembly process for a two pass assembler.
+    - Trace a given simple assembly language program.
+- CIE 9618: 9.1 Computational Thinking Skills:
+    - Show an understanding of abstraction (UI as abstraction over simulator complexity).
+    - Describe and use decomposition (app composed of assembler UI, CPU displays, controls).
+
+Design note:
+- The app integrates two complementary workflows:
+  1. **Compilation phase**: User enters assembly code; AssemblerStepper visualizes
+     the two-pass assembly process step-by-step (trim → pass 1 → pass 2).
+  2. **Execution phase**: After compilation, CPU executes the loaded program,
+     advancing through RTN steps visualized in real-time on CPU component displays.
+- The TickerController manages both compilation speed and execution speed,
+  allowing users to step manually (press T) or auto-progress at configurable speed.
+- Display mode (decimal/hex/binary) applies throughout the UI.
+
+Entry point / public API:
+- `CPUInterfaceApp` class: The main Textual application.
+
+Contained items:
+- `load_fib2_program()`: Helper to load pre-built Fibonacci example.
+- `CPUInterfaceApp`: Main application class with compose, action methods, and event handling.
+
+Educational intent:
+Students can interact with the CPU simulator in a familiar text-based environment.
+The UI makes the abstract concepts of assembly and CPU execution concrete through
+visual highlighting, bus ASCII art, and step-by-step progression through each
+phase of compilation and execution.
+"""
+
 from pathlib import Path
 
 from textual.app import App
