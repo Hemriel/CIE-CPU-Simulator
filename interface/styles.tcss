@@ -1,8 +1,34 @@
-/* This file sets up display attributes for most elements.
-This is not in the curriculum, and isn't native to python either.
-It actually follows rules set up by the textual module.
-For more information:
-https://textual.textualize.io/guide/CSS/ */
+/* CPU_Sim UI Styling and Layout Configuration
+ * 
+ * This file defines all visual styles (colors, sizing, spacing) and layout rules
+ * for the CPU simulator interface using Textual's CSS system (not Cascading Style
+ * Sheets, but a similar declarative approach). This is specific to Textual and not
+ * part of the CIE curriculum.
+ * 
+ * For more information on Textual CSS:
+ * https://textual.textualize.io/guide/CSS/
+ * 
+ * LAYOUT STRATEGY:
+ * The UI is organized as a horizontal split into 5 columns:
+ * 1. Code Editor (width: 30) - left edge
+ * 2. Label Tables (width: 24) - instruction and variable labels
+ * 3. Internal Bus Column (flexible) - shows data flow inside CPU
+ * 4. Register Column (width: 23) - PC, MAR, MDR, CIR, ACC, IX
+ * 5. External Bus Column (flexible) - shows address/data buses
+ * 6. RAM Column (width: 26) - memory viewer
+ * 
+ * VISUAL HIERARCHY:
+ * - All widgets use heavy borders (border: heavy) to create clear separation
+ * - Flexibly-sized columns (1fr) expand/contract with terminal resize
+ * - Inactive components fade (opacity: 0.4) during non-execution phases
+ * - Status line at bottom uses inverted colors (dark bg, light text) for prominence
+ * 
+ * COMPONENT SIZING:
+ * - Most columns use fixed widths (30, 24, 23, 26) for stable layout
+ * - Flex columns (#inner-bus-column, #outer-bus-column) use 1fr for elasticity
+ * - Display tables scale to available space within their parent containers
+ * - Height: 100% is used for full-height components; 1fr for flexible growth
+ */
 
 /* # is for addressing things by widget id */
 #code-editor {
