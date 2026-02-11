@@ -26,16 +26,17 @@ Their import should then just contain:
     from assembler.assembler import AssemblerStepper
 
 Includes:
-- data classes to represent intermediate and final assembler state: 
-:class:`RamWrite`, 
-:class:`ParsingResult`,
-:class:`AssemblerSnapshot`.
-- main stepper class: 
-:class:`AssemblerStepper`.
-- helper functions for parsing and emitting instructions: 
-:func:`parse_line`,
-:func:`create_instruction_from_parsing_result`,
-:func:`operand_to_int`
+- Data classes to represent intermediate and final assembler state: 
+  :class:`RamWrite`, :class:`ParsingResult`, :class:`AssemblerSnapshot`.
+- Main stepper class: 
+  :class:`AssemblerStepper`.
+- Public parsing and emission functions: 
+  :func:`parse_line`, :func:`_create_instruction_from_parsing_result`.
+- Private operand resolution helpers (addressing modes):
+  :func:`_parse_immediate_operand` (# / B / & literals),
+  :func:`_resolve_label_operand` (instruction/variable labels),
+  :func:`_resolve_register_operand` (register names),
+  :func:`_operand_to_int` (dispatcher for operand resolution).
 
 Educational intent
 ------------------
@@ -44,6 +45,9 @@ The stepper exists so students can *watch* the classic two-pass assembler:
 1. A quick "trim" stage removes comments and blank lines.
 2. Pass 1 scans each remaining line to build label tables.
 3. Pass 2 emits machine code and (optionally) streams it into RAM.
+
+The operand resolution helpers are separated by addressing mode (immediate, label,
+register) to make it clear how the assembler handles each mode independently.
 """
 
 from common.instructions import get_instruction_by_mnemonic
@@ -797,6 +801,93 @@ def _create_instruction_from_parsing_result(
     return result, looked_at_instruction, looked_at_variable
 
 
+def _parse_immediate_operand(operand_token: str) -> int:
+    """Parse an immediate addressing mode operand (literal value).
+    
+    Immediate operands are prefixed with #, B, or & to indicate decimal,
+    binary, or hexadecimal notation respectively.
+    
+    Args:
+        operand_token: Token starting with #, B, or &.
+    
+    Returns:
+        The parsed integer value.
+    
+    Raises:
+        AssemblingError: If parsing fails (invalid format/digits).
+    """
+    if operand_token.startswith("#"):
+        # Decimal literal: #42
+        return int(operand_token[1:], 10)
+    elif operand_token.startswith("B"):
+        # Binary literal: B1010
+        return int(operand_token[1:], 2)
+    elif operand_token.startswith("&"):
+        # Hexadecimal literal: &2A
+        return int(operand_token[1:], 16)
+    else:
+        # Should not reach here; caller checks prefix
+        raise AssemblingError(f"Invalid immediate operand format '{operand_token}'.")
+
+
+def _resolve_label_operand(
+    operand_token: str,
+    instruction_labels: dict[str, int],
+    variable_labels: dict[str, int],
+) -> tuple[int, str | None, str | None]:
+    """Resolve a label operand (direct or indirect addressing).
+    
+    Labels can reference either instruction addresses (for jumps) or variable
+    addresses (for data access). Returns the address and tracks which label
+    was accessed for UI highlighting.
+    
+    Args:
+        operand_token: Label name.
+        instruction_labels: Instruction label -> address map.
+        variable_labels: Variable label -> address map.
+    
+    Returns:
+        Tuple of (address_value, instruction_label_accessed, variable_label_accessed).
+    
+    Raises:
+        AssemblingError: If label is not defined.
+    """
+    if operand_token in instruction_labels:
+        return instruction_labels[operand_token], operand_token, None
+    elif operand_token in variable_labels:
+        return variable_labels[operand_token], None, operand_token
+    else:
+        raise AssemblingError(f"Undefined label '{operand_token}'.")
+
+
+def _resolve_register_operand(operand_token: str) -> int:
+    """Resolve a register name operand to its numeric index.
+    
+    Register names (ACC, IX, PC, MAR, MDR, CIR) map to internal bus identifiers
+    used by the CPU component system.
+    
+    Args:
+        operand_token: Register name (e.g., "ACC").
+    
+    Returns:
+        Numeric register index from RegisterIndex mapping.
+    
+    Raises:
+        AssemblingError: If register name is not recognized.
+    """
+    valid_registers = [
+        ComponentName.ACC,
+        ComponentName.IX,
+        ComponentName.PC,
+        ComponentName.MAR,
+        ComponentName.MDR,
+        ComponentName.CIR,
+    ]
+    if operand_token not in valid_registers:
+        raise AssemblingError(f"Unknown register '{operand_token}'.")
+    return RegisterIndex[ComponentName(operand_token)]
+
+
 def _operand_to_int(
     operand_token: str | None,
     instruction_labels: dict[str, int],
@@ -805,8 +896,9 @@ def _operand_to_int(
     """Resolve an operand token into a 16-bit value.
 
     The operand could be an immediate literal, a label that points to code/data,
-    or a register alias such as ACC or PC. RegisterIndex ensures register names
-    map back to the numeric bus identifier defined in the constants.
+    or a register alias such as ACC or PC. This function dispatches to specialized
+    parsers based on the operand format, keeping the main logic clean.
+    
     Args:
         operand_token: Raw token parsed after the mnemonic.
         instruction_labels: Label -> address map for instructions.
@@ -816,33 +908,33 @@ def _operand_to_int(
         The resolved 16-bit integer value to embed in the instruction,
         plus optionally the instruction label and variable label looked at.
     """
-    looked_at_instruction = None
-    looked_at_variable = None
     if operand_token is None:
         raise AssemblingError("Operand is missing.")
-    if operand_token.startswith("#"):
-        value = int(operand_token[1:], 10)
-    elif operand_token.startswith("B"):
-        value = int(operand_token[1:], 2)
-    elif operand_token.startswith("&"):
-        value = int(operand_token[1:], 16)
-    elif operand_token in instruction_labels:
-        value = instruction_labels[operand_token]
-        looked_at_instruction = operand_token
-    elif operand_token in variable_labels:
-        value = variable_labels[operand_token]
-        looked_at_variable = operand_token
-    elif operand_token in [
-        ComponentName.ACC,
-        ComponentName.IX,
-        ComponentName.PC,
-        ComponentName.MAR,
-        ComponentName.MDR,
-        ComponentName.CIR,
-    ]:
-        value = RegisterIndex[ComponentName(operand_token)]
+    
+    # Immediate addressing (# for decimal, B for binary, & for hex)
+    if operand_token.startswith(("#", "B", "&")):
+        value = _parse_immediate_operand(operand_token)
+        looked_at_instruction = None
+        looked_at_variable = None
+    
+    # Label addressing (instruction or variable)
+    elif operand_token[0].isalpha() or operand_token[0] == "_":
+        # Could be a label or register name; try label first
+        if operand_token in instruction_labels or operand_token in variable_labels:
+            value, looked_at_instruction, looked_at_variable = _resolve_label_operand(
+                operand_token, instruction_labels, variable_labels
+            )
+        else:
+            # Not a label; try register
+            value = _resolve_register_operand(operand_token)
+            looked_at_instruction = None
+            looked_at_variable = None
+    
     else:
         raise AssemblingError(f"Unknown operand or label '{operand_token}'.")
+    
+    # Validate range
     if not (0 <= value <= 0xFFFF):
         raise AssemblingError(f"Operand value '{value}' out of range (0 to 65535).")
+    
     return value, looked_at_instruction, looked_at_variable
