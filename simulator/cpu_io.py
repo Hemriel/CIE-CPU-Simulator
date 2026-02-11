@@ -25,7 +25,7 @@ Includes:
 """
 
 from dataclasses import dataclass
-from cpu.component import CPUComponent
+from simulator.component import CPUComponent
 from common.constants import ComponentName
 
 ### Educational notes on Python operations used in this module ###

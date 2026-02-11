@@ -15,8 +15,9 @@ Design choices:
   display updates.
 """
 
-from cpu.ALU import ALU # the displayer needs to know about the ALU it displays
-from common.constants import DisplayMode, formatted_value
+from simulator.ALU import ALU # the displayer needs to know about the ALU it displays
+from common.constants import DisplayMode
+from common.utils import formatted_value
 
 # textual specific imports. For more information, see https://textual.textualize.io/
 from textual.app import ComposeResult

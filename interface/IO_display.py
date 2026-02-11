@@ -14,7 +14,7 @@ Design choices:
     itself and waits for the I/O component to request display updates.
 """
 
-from cpu.cpu_io import IO  # the displayer needs to know about the I/O it displays
+from simulator.cpu_io import IO  # the displayer needs to know about the I/O it displays
 
 # textual specific imports. For more information, see https://textual.textualize.io/
 from textual.widgets import Label

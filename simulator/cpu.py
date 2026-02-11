@@ -50,12 +50,12 @@ Educational notes:
 """
 
 from common.constants import ComponentName
-from cpu.CU import CU, create_required_components_for_CU
-from cpu.ALU import ALU, FlagComponent
-from cpu.buses import Bus
-from cpu.RAM import RAM, RAMAddress
-from cpu.register import Register
-from cpu.cpu_io import IO
+from simulator.CU import CU, create_required_components_for_CU
+from simulator.ALU import ALU, FlagComponent
+from simulator.buses import Bus
+from simulator.RAM import RAM, RAMAddress
+from simulator.register import Register
+from simulator.cpu_io import IO
 
 
 class CPU:

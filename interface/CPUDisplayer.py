@@ -26,7 +26,7 @@ Design note:
   * Backend → Frontend: CPU components hold displayer references for update hooks.
   * Frontend → Backend: Display widgets hold component references for state reading.
 """
-from cpu.cpu import CPU
+from simulator.cpu import CPU
 
 # Textual-specific imports. For more information, see https://textual.textualize.io/
 from textual.app import ComposeResult

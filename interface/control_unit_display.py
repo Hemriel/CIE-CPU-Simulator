@@ -14,8 +14,9 @@ Design choices:
     control logic itself and waits for the CU to request display updates.
 """
 
-from cpu.CU import CU  # the displayer needs to know about the CU it displays
-from common.constants import DisplayMode, formatted_value
+from simulator.CU import CU  # the displayer needs to know about the CU it displays
+from common.constants import DisplayMode
+from common.utils import formatted_value
 
 # textual specific imports. For more information, see https://textual.textualize.io/
 from textual.app import ComposeResult

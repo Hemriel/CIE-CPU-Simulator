@@ -28,7 +28,7 @@ from rich.text import Text
 from textual.widgets import Static
 
 from common.constants import ComponentName
-from cpu.buses import Bus
+from simulator.buses import Bus
 
 from interface.bus_ascii import (
     draw_connection_ascii,

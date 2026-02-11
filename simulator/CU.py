@@ -56,7 +56,7 @@ Educational notes:
 """
 
 from dataclasses import dataclass, field
-from cpu.component import CPUComponent
+from simulator.component import CPUComponent
 from common.constants import (
     ComponentName,
     ControlSignal,
@@ -65,11 +65,11 @@ from common.constants import (
     MissingComponentError,
     RegisterIndex,
 )
-from cpu.ALU import ALU, FlagComponent
-from cpu.register import Register
-from cpu.buses import Bus
-from cpu.RAM import RAM, RAMAddress
-from cpu.cpu_io import IO
+from simulator.ALU import ALU, FlagComponent
+from simulator.register import Register
+from simulator.buses import Bus
+from simulator.RAM import RAM, RAMAddress
+from simulator.cpu_io import IO
 from common.instructions import (
     RTNStep,
     instruction_set,

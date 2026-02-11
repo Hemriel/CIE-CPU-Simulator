@@ -49,7 +49,7 @@ signals shows students exactly when and how registers are accessed during execut
 
 from dataclasses import dataclass
 from common.constants import WORD_SIZE, ComponentName, ControlSignal
-from cpu.component import CPUComponent
+from simulator.component import CPUComponent
 
 
 ### Educational notes on Python operations used in this module ###

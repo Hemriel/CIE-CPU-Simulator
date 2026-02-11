@@ -14,8 +14,9 @@ Design choices:
     register logic itself and waits for the Register to request display updates.
 """
 
-from common.constants import DisplayMode, formatted_value
-from cpu.register import Register  # the displayer needs to know about the register it displays
+from common.constants import DisplayMode
+from common.utils import formatted_value
+from simulator.register import Register  # the displayer needs to know about the register it displays
 
 from rich.text import Text
 # textual specific imports. For more information, see https://textual.textualize.io/

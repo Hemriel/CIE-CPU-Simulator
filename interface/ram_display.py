@@ -19,8 +19,9 @@ Design note:
   address visible while minimizing unnecessary scrolling (only scrolls if the
   address moves toward the edge of the display window).
 """
-from cpu.RAM import RAM
-from common.constants import DisplayMode, formatted_value
+from simulator.RAM import RAM
+from common.constants import DisplayMode
+from common.utils import formatted_value
 
 # Textual-specific imports. For more information, see https://textual.textualize.io/
 from rich.text import Text

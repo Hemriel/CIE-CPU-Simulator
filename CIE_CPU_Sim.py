@@ -50,7 +50,7 @@ from textual.containers import Horizontal, Vertical
 
 from common.constants import DisplayMode
 
-from cpu.cpu import CPU
+from simulator.cpu import CPU
 from assembler.assembler import AssemblerStepper
 from interface.CPUDisplayer import CPUDisplay
 from interface.instruction_label_display import InstructionLabelDisplay

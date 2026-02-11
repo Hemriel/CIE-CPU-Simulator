@@ -34,7 +34,7 @@ Includes:
 
 from dataclasses import dataclass, field
 from common.constants import ComponentName, WORD_SIZE
-from cpu.component import CPUComponent
+from simulator.component import CPUComponent
 
 
 ### Educational notes on Python operations used in this module ###

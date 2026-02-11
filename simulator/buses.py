@@ -31,7 +31,7 @@ Includes:
 """
 
 from dataclasses import dataclass, field
-from cpu.component import CPUComponent
+from simulator.component import CPUComponent
 from common.constants import ComponentName, WORD_SIZE, AbnormalComponentUseError
 
 
