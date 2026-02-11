@@ -34,7 +34,7 @@ CPUDisplay {
 }
 
 #control-column {
-    width: 32;
+    width: 34;
     height: 100%;
 }
 
@@ -54,7 +54,7 @@ CPUDisplay {
 }
 
 #ram-column {
-    width: 16;
+    width: 26;
     height: 100%;
 }
 
@@ -72,11 +72,11 @@ OuterBusDisplay {
 
 RAMDataDisplay {
     height: 100%;
-    width: 16;
+    width: 26;
 }
 
 RegisterDisplay {
-    content-align-horizontal: center;
+    content-align-horizontal: right;
     width: 23;
     border: heavy;
 }
@@ -96,7 +96,7 @@ ControlUnitDisplay {
 /* . prefix when addressing a CSS class (added/removed with .addclass()) */
 .cu-values {
     width: 1fr;
-    content-align-horizontal: right
+    content-align-horizontal: right;
 }
 
 ALUDisplay {
@@ -107,7 +107,7 @@ ALUDisplay {
 
 .alu-values {
     width: 1fr;
-    content-align-horizontal: right
+    content-align-horizontal: right;
 }
 
 .inactive {
@@ -121,4 +121,10 @@ ALUDisplay {
     color: #DDDDDD;
     content-align: left middle;
     padding: 0 1;
+}
+
+.awaiting-input {
+    border: heavy $accent;
+    background: $error;
+    color: #ffffff;
 }

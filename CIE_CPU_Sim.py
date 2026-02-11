@@ -4,6 +4,8 @@ from textual.app import App
 from textual.widgets import Footer, Header, Label, TextArea
 from textual.containers import Horizontal, Vertical
 
+from common.constants import DisplayMode
+
 from cpu.cpu import CPU
 from assembler.assembler import AssemblerStepper
 from interface.CPUDisplayer import CPUDisplay
@@ -28,6 +30,9 @@ class CPUInterfaceApp(App):
 
     BINDINGS = [
         ("ctrl+s", "compile", "Compile"),
+        ("ctrl+1", DisplayMode.DECIMAL, "Dec"),
+        ("ctrl+2", DisplayMode.HEX, "Hex"),
+        ("ctrl+3", DisplayMode.BINARY, "Bin"),
         ("t", "tick", "Tick"),
         ("ctrl+t", "auto_tick", "Auto Tick"),
         ("+", "increase_speed", "Increase Speed"),
@@ -54,6 +59,8 @@ class CPUInterfaceApp(App):
         self._finished = False
         self.code_ready = False
 
+        self.number_display_mode = DisplayMode.BINARY
+
         self.tick_controller = TickerController(self)
 
     def compose(self):
@@ -68,6 +75,8 @@ class CPUInterfaceApp(App):
         yield Footer()
         self.tick_controller.start(self.action_tick)
         self.tick_controller.pause()
+
+        self.switch_numbering_mode(self.number_display_mode)
 
     def action_tick(self) -> None:
         """Advance the simulation by exactly one RTN step.
@@ -142,6 +151,26 @@ class CPUInterfaceApp(App):
         new_interval = self.tick_controller.decrease_speed()
         self.status_line.update(f"ticking speed decreased (interval: {new_interval:.2f}s)")
 
+    def switch_numbering_mode(self, mode: DisplayMode) -> None:
+        """Switch the number display mode of the CPU display."""
+        self.number_display_mode = mode
+        self.cpu_display.set_number_display_mode(self.number_display_mode)
+        self.status_line.update(f"number display mode: {mode.value}")
+        self.refresh_bindings()
+        self.cpu_display.refresh_all()
+
+    def action_decimal(self) -> None:
+        """Set number display mode to decimal."""
+        self.switch_numbering_mode(DisplayMode.DECIMAL)
+
+    def action_hexadecimal(self) -> None:
+        """Set number display mode to hexadecimal."""
+        self.switch_numbering_mode(DisplayMode.HEX)
+
+    def action_binary(self) -> None:
+        """Set number display mode to binary."""
+        self.switch_numbering_mode(DisplayMode.BINARY)
+
     def action_compile(self) -> None:
         """Start the interactive (tickable) two-pass assembly process."""
 
@@ -180,6 +209,8 @@ class CPUInterfaceApp(App):
     def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
         if action == "quit":
             return True
+        elif action in (DisplayMode.DECIMAL, DisplayMode.HEX, DisplayMode.BINARY):
+            return self.number_display_mode != action
         elif action in ("tick", "auto_tick", "increase_speed", "decrease_speed"):
             return self.assembling or self.code_ready
         elif action == "compile":

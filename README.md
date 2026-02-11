@@ -251,7 +251,7 @@ TODO
 - [x] Fix second pass display not highlighting source code lines
 - [x] Fix hotkeys not displaying in footer
 - [x] Fix control signal labeling on register not displaying "inc"/"dec"
-- [ ] Allow user to switch between numbering systems
+- [x] Allow user to switch between numbering systems
 - [x] Add autorun mode with speed control
 - [ ] Allow user to edit Input queue contents
 - [ ] Block execution when waiting for IN and Input queue is empty

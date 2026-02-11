@@ -20,6 +20,7 @@ Design note:
   address moves toward the edge of the display window).
 """
 from cpu.RAM import RAM
+from common.constants import DisplayMode, formatted_value
 
 # Textual-specific imports. For more information, see https://textual.textualize.io/
 from rich.text import Text
@@ -36,7 +37,7 @@ class RAMAddressDisplay(Static):
 
     DEFAULT_CSS = """
     RAMAddressDisplay {
-        width: 16;
+        width: 26;
         background: grey;
         content-align: center middle;
     }
@@ -95,10 +96,22 @@ class RAMDataDisplay(DataTable):
         self.display_start = 0  # First address shown in the table.
         self.cursor_type = "row"  # Use row-based cursor to highlight active address.
 
+        self.number_display_mode = DisplayMode.HEX
+
     def on_mount(self) -> None:
         self.add_column("#")
         self.add_column("Value")
         self.update_display()
+
+    def set_number_display_mode(self, mode: DisplayMode) -> None:
+        """Set the number display mode for the ALU values.
+        
+        Args:
+            mode: One of "decimal", "hexadecimal", or "binary"
+        """
+        # Currently, this display only supports hexadecimal.
+        # This method is a placeholder for future extensions.
+        self.number_display_mode = mode
 
     def update_display(self) -> None:
         """Refresh the table with current RAM state and active address.
@@ -107,7 +120,7 @@ class RAMDataDisplay(DataTable):
         1. Updates the 'inactive' CSS class based on RAM activity.
         2. Computes which RAM addresses to display based on the active address
            and smart scrolling logic.
-        3. Rebuilds the table with current RAM values in hexadecimal.
+        3. Rebuilds the table with current RAM values in the selected number display mode.
         4. Positions the cursor at the active address row.
         """
         # Toggle the 'inactive' CSS class for visual feedback when RAM is idle.
@@ -131,7 +144,7 @@ class RAMDataDisplay(DataTable):
         for offset in range(height):
             addr = self.display_start + offset
             value = self.ram.memory.get(addr, 0)  # Default to 0 if not in memory.
-            lines.append([f"{addr:04X}", f"{value:04X}"])  # Hex format.
+            lines.append([f"{addr:04X}", formatted_value(value, self.number_display_mode)])  # Format according to display mode.
         
         # Clear and repopulate the table.
         self.clear()

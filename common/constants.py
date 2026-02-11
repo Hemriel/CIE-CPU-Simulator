@@ -5,6 +5,7 @@ Responsibility:
   to ensure consistency across all modules and prevent typos.
 - Act as the single source of truth for enum values and magic numbers used in
   CPU simulation, control logic, memory model, and UI display.
+- Provide a single source of truth for number formatting across the UI.
 
 Illustrates:
 - CIE 9618: 4.1 Central Processing Unit Architecture:
@@ -38,6 +39,7 @@ Includes:
 - Display modes: :class:`DisplayMode` (hex, decimal, binary)
 - CPU timing: :class:`CyclePhase` and :data:`CYCLE_PHASES`
 - Global constants: :data:`WORD_SIZE`
+- Number formatting function: :func:`formatted_value`
 """
 
 from enum import StrEnum
@@ -148,11 +150,10 @@ class DisplayMode(StrEnum):
     """Choices for how registers and memory are rendered on screen.
     
     Students can toggle between radixes to understand how binary and hex
-    representations relate to decimal values (CIE 9168 §1.1 Show 
-    understanding of different numbering systems).
+    representations relate to decimal values (CIE 9168 §1.1 Show understanding of different numbering systems).
     """
 
-    HEX = "hex"
+    HEX = "hexadecimal"
     DECIMAL = "decimal"
     BINARY = "binary"
 
@@ -217,6 +218,27 @@ CYCLE_PHASES = cycle([CyclePhase.FETCH, CyclePhase.DECODE, CyclePhase.EXECUTE])
 # All CPU have a fixed word size defined by the architecture. 
 WORD_SIZE = 16
 
+# Standardized method to format numeric values according to display mode.
+def formatted_value(value: int, mode: DisplayMode) -> str:
+    """Format a numeric value according to the current display mode.
+    
+    Args:
+        value: The integer value to format.
+        mode: The display mode to use for formatting.
+    Returns:
+        A string representation of the value in the selected radix.
+    """
+    if mode == DisplayMode.HEX:
+        return f"{value:04X}"
+    elif mode == DisplayMode.DECIMAL:
+        return str(value)
+    elif mode == DisplayMode.BINARY:
+        bin = f"{value:016b}"
+        for i in range(4, len(bin), 5):
+            bin = bin[:len(bin)-i] + " " + bin[len(bin)-i:]
+        return bin
+    else:
+        return str(value)  # Fallback to decimal
 
 if __name__ == "__main__":
     # Quick test to verify that all enums can be iterated and printed.

@@ -16,11 +16,13 @@ Design choices:
 """
 
 from cpu.ALU import ALU # the displayer needs to know about the ALU it displays
+from common.constants import DisplayMode, formatted_value
 
 # textual specific imports. For more information, see https://textual.textualize.io/
 from textual.app import ComposeResult
 from textual.containers import Vertical, Horizontal
 from textual.widgets import Label
+
 
 
 class ALUDisplay(Vertical):
@@ -51,6 +53,8 @@ class ALUDisplay(Vertical):
         self.result_value = Label("", classes="alu-values")
         self.flag_value = Label("", classes="alu-values")
 
+        self.number_display_mode = DisplayMode.HEX
+
     def compose(self) -> ComposeResult:
         """Build the widget layout with operand/result rows."""
         with Horizontal():
@@ -67,6 +71,16 @@ class ALUDisplay(Vertical):
             yield self.flag_value
         self.update_display()
 
+    def set_number_display_mode(self, mode: DisplayMode) -> None:
+        """Set the number display mode for the ALU values.
+        
+        Args:
+            mode: One of "decimal", "hexadecimal", or "binary"
+        """
+        # Currently, this display only supports hexadecimal.
+        # This method is a placeholder for future extensions.
+        self.number_display_mode = mode
+
     def update_display(self) -> None:
         """Refresh the display with current ALU state.
         
@@ -81,9 +95,9 @@ class ALUDisplay(Vertical):
             self.add_class("inactive")
         # Update displayed values
         flag = self.alu.flag_component
-        self.acc_value.content = f"{alu.acc:04X}"
-        self.operand_value.content = f"{alu.operand:04X}"
-        self.result_value.content = f"{alu.result:04X}"
+        self.acc_value.content = formatted_value(alu.acc, self.number_display_mode)
+        self.operand_value.content = formatted_value(alu.operand, self.number_display_mode)
+        self.result_value.content = formatted_value(alu.result, self.number_display_mode)
         self.flag_value.content = f"{flag.value}"
         # Show current control signal (operation mode) in the border subtitle
         self.border_subtitle = f"{alu.control or 'idle'}"

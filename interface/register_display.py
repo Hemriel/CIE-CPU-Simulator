@@ -14,6 +14,7 @@ Design choices:
     register logic itself and waits for the Register to request display updates.
 """
 
+from common.constants import DisplayMode, formatted_value
 from cpu.register import Register  # the displayer needs to know about the register it displays
 
 from rich.text import Text
@@ -40,9 +41,21 @@ class RegisterDisplay(Label):
         self.register = register
         self.border_title = label
 
+        self.number_display_mode = DisplayMode.HEX
+
     def on_mount(self) -> None:
         """Initialize the display once the widget is mounted."""
         self.update_display()
+        
+    def set_number_display_mode(self, mode: DisplayMode) -> None:
+        """Set the number display mode for the ALU values.
+        
+        Args:
+            mode: One of "decimal", "hexadecimal", or "binary"
+        """
+        # Currently, this display only supports hexadecimal.
+        # This method is a placeholder for future extensions.
+        self.number_display_mode = mode
 
     def update_display(self) -> None:
         """Refresh the display with current register state.
@@ -60,4 +73,4 @@ class RegisterDisplay(Label):
         value = getattr(self.register, "_value", 0)
         control = getattr(self.register, "_control", None)
         self.border_subtitle = f"{control or 'idle'}"
-        self.content = Text(f"     {value:04X}")
+        self.content = Text(f"{formatted_value(value, self.number_display_mode)}")

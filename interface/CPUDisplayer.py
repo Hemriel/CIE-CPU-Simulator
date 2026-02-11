@@ -42,7 +42,7 @@ from interface.IO_display import IODisplay
 from interface.ram_display import RAMAddressDisplay, RAMDataDisplay
 from interface.vspacer import VSpacer
 
-from common.constants import ComponentName
+from common.constants import ComponentName, DisplayMode
 
 
 class CPUDisplay(Widget):
@@ -253,3 +253,13 @@ class CPUDisplay(Widget):
         """
         for displayer in self._displayers:
             displayer.update_display()
+
+    def set_number_display_mode(self, mode: DisplayMode) -> None:
+        """Set the number display mode for all relevant components.
+        
+        Args:
+            mode: One of "decimal", "hexadecimal", or "binary"
+        """
+        for displayer in self._displayers:
+            if hasattr(displayer, "set_number_display_mode"):
+                displayer.set_number_display_mode(mode)

@@ -66,6 +66,17 @@ class Displayer(Protocol):
         """Refresh the on-screen display for the bound component."""
         pass
 
+    def prompt_user_for_input(self) -> str | None:
+        """Prompt the user for input when the component requires data.
+
+        This is used by components like IO that may need to request input
+        from the user during execution.
+
+        Returns:
+            The string value provided by the user, or None if no input was given.
+        """
+        pass
+
 # Although this is interface related code , and therefore shouldn't be here, 
 # it is included here as it was used during devellopment to test and debug 
 # CPU components before the UI was implemented.
@@ -91,6 +102,9 @@ class TerminalDisplayer:
         This uses the component's `__str__` or `__repr__` implementation.
         """
         print(self.component)
+
+    def prompt_user_for_input(self) -> str | None:
+        return input(f"Input requested for {self.component.name.value}. Enter a character (or leave blank to skip): ") or None
 
     def __repr__(self) -> str:
         return "TerminalDisplayer"

@@ -15,6 +15,7 @@ Design choices:
 """
 
 from cpu.CU import CU  # the displayer needs to know about the CU it displays
+from common.constants import DisplayMode, formatted_value
 
 # textual specific imports. For more information, see https://textual.textualize.io/
 from textual.app import ComposeResult
@@ -48,6 +49,7 @@ class ControlUnitDisplay(Vertical):
         self.step_value = Label("", classes="cu-values")
         self.phase_value = Label("", classes="cu-values")
         self.cu = cu
+        self.number_display_mode = DisplayMode.HEX
 
     def compose(self) -> ComposeResult:
         """Build the widget layout with instruction/phase rows."""
@@ -65,22 +67,36 @@ class ControlUnitDisplay(Vertical):
             yield self.phase_value
         self.update_display()
 
+    def set_number_display_mode(self, mode: DisplayMode) -> None:
+        """Set the number display mode for the ALU values.
+
+        Args:
+            mode: One of "decimal", "hexadecimal", or "binary"
+        """
+        # Currently, this display only supports hexadecimal.
+        # This method is a placeholder for future extensions.
+        self.number_display_mode = mode
+
     def update_display(self) -> None:
         """Refresh the display with current CU state.
 
         Updates the current instruction, assembly string, RTN step, and phase,
         and applies active/idle styling.
         """
-        cu = self.cu 
+        cu = self.cu
 
         # Apply active/inactive styling based on RTN step participation
         if cu.last_active:
             self.remove_class("inactive")
         else:
             self.add_class("inactive")
-        
+
         # Update displayed values
-        instruction = cu.current_instruction or "None"
+        instruction = (
+            formatted_value(cu.current_instruction, self.number_display_mode)
+            if cu.current_instruction is not None
+            else "None"
+        )
         rtn_step = cu.current_RTNStep or "Idle"
         phase = getattr(cu.current_phase, "name", cu.current_phase)
         self.inst_value.content = f"{instruction}"
