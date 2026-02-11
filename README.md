@@ -249,10 +249,10 @@ TODO
 
 - [x] Add missing documentation(display modules not documented yet)
 - [x] Fix second pass display not highlighting source code lines
-- [ ] Fix hotkeys not displaying in footer
+- [x] Fix hotkeys not displaying in footer
 - [x] Fix control signal labeling on register not displaying "inc"/"dec"
 - [ ] Allow user to switch between numbering systems
-- [ ] Add autorun mode with speed control
+- [x] Add autorun mode with speed control
 - [ ] Allow user to edit Input queue contents
 - [ ] Block execution when waiting for IN and Input queue is empty
 - [ ] Implement test suite with coverage reports

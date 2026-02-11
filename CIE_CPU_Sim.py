@@ -9,6 +9,7 @@ from assembler.assembler import AssemblerStepper
 from interface.CPUDisplayer import CPUDisplay
 from interface.instruction_label_display import InstructionLabelDisplay
 from interface.variable_label_display import VariableLabelDisplay
+from interface.TickerController import TickerController
 
 
 def load_fib2_program(cpu: CPU, source: Path) -> None:
@@ -28,6 +29,9 @@ class CPUInterfaceApp(App):
     BINDINGS = [
         ("ctrl+s", "compile", "Compile"),
         ("t", "tick", "Tick"),
+        ("ctrl+t", "auto_tick", "Auto Tick"),
+        ("+", "increase_speed", "Increase Speed"),
+        ("-", "decrease_speed", "Decrease Speed"),
         ("q", "quit", "Quit"),
     ]
 
@@ -50,6 +54,8 @@ class CPUInterfaceApp(App):
         self._finished = False
         self.code_ready = False
 
+        self.tick_controller = TickerController(self)
+
     def compose(self):
         yield Header()
         with Horizontal():
@@ -60,6 +66,8 @@ class CPUInterfaceApp(App):
             yield self.cpu_display
         yield self.status_line
         yield Footer()
+        self.tick_controller.start(self.action_tick)
+        self.tick_controller.pause()
 
     def action_tick(self) -> None:
         """Advance the simulation by exactly one RTN step.
@@ -119,6 +127,21 @@ class CPUInterfaceApp(App):
         self.status_line.update("running program" if not self._finished else "program finished")
         self.cpu_display.refresh_all()
 
+    def action_auto_tick(self) -> None:
+        """Toggle automatic ticking on and off."""
+        running = self.tick_controller.toggle()
+        self.status_line.update("auto-ticking" if running else "auto-ticking paused")
+
+    def action_increase_speed(self) -> None:
+        """Increase the automatic ticking speed."""
+        new_interval = self.tick_controller.increase_speed()
+        self.status_line.update(f"ticking speed increased (interval: {new_interval:.2f}s)")
+
+    def action_decrease_speed(self) -> None:
+        """Decrease the automatic ticking speed."""
+        new_interval = self.tick_controller.decrease_speed()
+        self.status_line.update(f"ticking speed decreased (interval: {new_interval:.2f}s)")
+
     def action_compile(self) -> None:
         """Start the interactive (tickable) two-pass assembly process."""
 
@@ -151,10 +174,13 @@ class CPUInterfaceApp(App):
         self.cpu.pc.write(0)
         self.cpu_display.refresh_all()
 
+        # Switch focus to cpu display, since text editors intercept some shortcuts we want to use.
+        self.cpu_display.focus()
+
     def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
         if action == "quit":
             return True
-        elif action == "tick":
+        elif action in ("tick", "auto_tick", "increase_speed", "decrease_speed"):
             return self.assembling or self.code_ready
         elif action == "compile":
             return (not self.assembling) and (not self.code_ready)

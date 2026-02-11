@@ -19,9 +19,32 @@ class TickerController:
 
     # Configuration constants
     DEFAULT_INTERVAL = 1.0
-    MIN_INTERVAL = 0.1
-    MAX_INTERVAL = 5.0
-    SPEED_DELTA = 0.1
+    MAX_INTERVAL = 10.0
+    MIN_INTERVAL = 0.01
+    SPEED_UP = [
+        (11.0, 5.1, 1.0), # High bound, low bound, delta
+        (5.1, 2.1, 0.5),
+        (2.1, 0.11, 0.1),
+        (0.11, 0.001, 0.01),
+    ]
+    SPEED_DOWN = [
+        (0.099, 0.001, 0.01),
+        (1.99, 0.099, 0.1),
+        (4.99, 1.99, 0.5),
+        (11.0, 4.99, 1.0),
+    ]
+    DELTA_DIRECTIONS = {"UP", "DOWN"}
+
+    def speed_delta(self, direction) -> float:
+        """Determine speed delta based on current interval.
+        
+        Returns:
+            float: Speed delta value
+        """
+        for (high, low, delta) in (self.SPEED_UP if direction == "UP" else self.SPEED_DOWN):
+            if low <= self.interval <= high:
+                return delta
+        raise ValueError(f"This scenario should not be possible: interval={self.interval}, direction={direction}")
 
     def __init__(self, app):
         """Initialize the ticker controller.
@@ -80,7 +103,7 @@ class TickerController:
         Returns:
             float: New interval value
         """
-        self.interval = max(self.MIN_INTERVAL, self.interval - self.SPEED_DELTA)
+        self.interval = max(self.MIN_INTERVAL, self.interval - self.speed_delta("UP"))
         self._restart_ticker()
         return self.interval
 
@@ -90,7 +113,7 @@ class TickerController:
         Returns:
             float: New interval value
         """
-        self.interval = min(self.MAX_INTERVAL, self.interval + self.SPEED_DELTA)
+        self.interval = min(self.MAX_INTERVAL, self.interval + self.speed_delta("DOWN"))
         self._restart_ticker()
         return self.interval
 
