@@ -53,7 +53,7 @@ class IO(CPUComponent):
     """
 
     name: ComponentName
-    contents: str = "example"  # Default queue content for demonstration
+    contents: str = ""
 
     def write(self, data: int) -> None:
         """Enqueue a byte by converting it to an ASCII character.

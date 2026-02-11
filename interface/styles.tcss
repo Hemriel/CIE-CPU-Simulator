@@ -124,7 +124,5 @@ ALUDisplay {
 }
 
 .awaiting-input {
-    border: heavy $accent;
-    background: $error;
-    color: #ffffff;
+    color: #ff0000;
 }

@@ -217,10 +217,10 @@ class CPUDisplay(Widget):
                 yield VSpacer()
                 yield self.control_display
                 yield VSpacer()
-                yield self.input_display
-                yield VSpacer()
-                yield self.output_display
-                yield VSpacer()
+                # yield self.input_display
+                # yield VSpacer()
+                # yield self.output_display
+                # yield VSpacer()
                 yield self.alu_display
                 yield VSpacer()
             

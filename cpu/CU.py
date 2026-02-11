@@ -218,7 +218,7 @@ class CU(CPUComponent):
 
     # Instruction state
     binary_instruction: int | None = None  # See "Educational notes" at top of file for union type explanation
-    current_instruction: str | None = None
+    current_instruction: int | None = None
     stringified_instruction: str | None = None
     opcode: int | None = None
     operand: int | None = None
@@ -356,7 +356,7 @@ class CU(CPUComponent):
         self.operand = instruction & 0b0000000011111111  # Mask to get low 8 bits
 
         # Create a binary string for debugging/display.
-        self.current_instruction = f"{self.opcode:08b} {self.operand:08b}"
+        self.current_instruction = instruction
 
         # Check if this instruction needs a long operand fetch.
         instruction_def = self.get_instruction_definition(self.opcode)

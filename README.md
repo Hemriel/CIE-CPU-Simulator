@@ -253,8 +253,8 @@ TODO
 - [x] Fix control signal labeling on register not displaying "inc"/"dec"
 - [x] Allow user to switch between numbering systems
 - [x] Add autorun mode with speed control
-- [ ] Allow user to edit Input queue contents
-- [ ] Block execution when waiting for IN and Input queue is empty
+- [-] Add Input and Output instruction logic
+- [-] Block execution when waiting for IN and Input queue is empty
 - [ ] Implement test suite with coverage reports
 - [ ] Save/load assembly programs from files
 
