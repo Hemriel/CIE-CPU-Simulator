@@ -817,9 +817,3 @@ class CU(CPUComponent):
             f"Binary Instruction: {bin_str} | "
             f"Current RTN Step: {self.current_RTNStep if self.current_RTNStep is not None else 'None'}"
         )
-
-
-if __name__ == "__main__":
-    # Simple test harness for debugging CU instruction decoding.
-    cu = CU(name=ComponentName.CU)
-    cu.set_instruction(0b000111000010100)  # Example: decode a test instruction

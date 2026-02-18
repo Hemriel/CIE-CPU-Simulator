@@ -91,3 +91,61 @@ class IO(CPUComponent):
 
     def __repr__(self) -> str:
         return f" IO | Contents: '{self.contents}'"
+    
+if __name__ == "__main__":
+    from common.tester import run_tests_for_function, test_module
+    from simulator.component import NonDisplayer
+
+    VERBOSE = False
+    # Default verbose value for all tests
+    
+    def test_write(verbose = False) -> bool:
+        """Test that write() correctly enqueues characters."""
+        io = IO(ComponentName.OUT)
+        if not verbose:
+            io.displayer = NonDisplayer()  # Disable display updates for cleaner test output
+        
+        def write(char_data: int, verbose = False) -> str:
+            """Helper to test the output of write() by returning the current contents."""
+            io.write(char_data)
+            return io.contents
+        
+        test_args = [
+            (42,),  # '*'
+            (65,),  # 'A'
+            (255,), # 'ÿ'
+        ]
+        expected = [
+            "*",
+            "*A",
+            "*Aÿ",
+        ]
+        return run_tests_for_function(
+            test_args,
+            expected,
+            write,
+        )
+    
+    def test_read(verbose = False) -> bool:
+        """Test that read() correctly dequeues characters and returns their ASCII codes."""
+        io = IO(ComponentName.IN, contents="CD")
+        if not verbose:
+            io.displayer = NonDisplayer() 
+        
+        args = [(), (), ()]
+        expected = [67, 68, None]
+
+        return run_tests_for_function(
+            args,
+            expected,
+            io.read,
+        )
+
+    test_module(
+        "IO component",
+        [
+            test_write,
+            test_read,
+        ],
+        verbose=VERBOSE
+    )

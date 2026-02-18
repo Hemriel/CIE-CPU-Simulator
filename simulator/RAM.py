@@ -203,3 +203,112 @@ class RAM(CPUComponent):
             A string showing the number of words allocated in memory.
         """
         return f"Size: {len(self.memory)} words"
+
+if __name__ == "__main__":
+    from common.tester import run_tests_for_function, test_module
+    from simulator.component import NonDisplayer
+
+    VERBOSE = False     #Should the tests be verbose or not by default
+
+    def test_address_read_write(verbose = False) -> bool:
+        """Test that writing to RAMAddress updates the address correctly."""
+        ram_address = RAMAddress()
+        if not verbose:
+            ram_address.displayer = NonDisplayer()  # Disable display updates for cleaner test output
+        
+        test_args = [
+            (0,),          # Minimum address
+            (42,),         # Arbitrary address
+            (65535,),      # Maximum address for 16-bit
+        ]
+        test_expected = [
+            0,
+            42,
+            65535,
+        ]
+        def address_read_write(arg: int) -> int:
+            ram_address.write(arg)
+            read = ram_address.read()
+            if read != arg:
+                raise AssertionError(
+                    f"Expected to read back {arg} but got {read} after writing to RAMAddress"
+                )
+            return ram_address.read()
+
+        return run_tests_for_function(
+            test_args,
+            test_expected,
+            address_read_write,
+        )
+    
+    def test_address_repr(verbose = False) -> bool:
+        """Test the string representation of RAMAddress shows the address in hex."""
+        ram_address = RAMAddress()
+        if not verbose:
+            ram_address.displayer = NonDisplayer()
+        
+        test_args = [
+            (0,),          # Minimum address
+            (42,),         # Arbitrary address
+            (65535,),      # Maximum address for 16-bit
+        ]
+        test_expected = [
+            "0000",
+            "002A",
+            "FFFF",
+        ]
+        def address_repr(arg: int) -> str:
+            ram_address.write(arg)
+            return repr(ram_address)
+
+        return run_tests_for_function(
+            test_args,
+            test_expected,
+            address_repr,
+        )
+    
+    def test_ram_read_write(verbose = False) -> bool:
+        """Test that writing to RAM stores data at the correct address and can be read back."""
+        ram_address = RAMAddress()
+        ram = RAM(address_comp=ram_address)
+        if not verbose:
+            ram_address.displayer = NonDisplayer()
+            ram.displayer = NonDisplayer()
+        
+        test_args = [
+            (0, 12345),          # Write to minimum address
+            (42, 54321),         # Write to arbitrary address
+            (65535, 65535),      # Write to maximum address for 16-bit
+        ]
+        test_expected = [
+            12345,
+            54321,
+            65535,
+        ]
+        def ram_read_write(address: int, data: int) -> int:
+            ram_address.write(address)  # Set the address in RAMAddress
+            ram.write(data)           # Write data to RAM at that address
+            read_data = ram.read()    # Read back the data from RAM
+            if read_data != data:
+                raise AssertionError(
+                    f"Expected to read back {data} but got {read_data} after writing to RAM at address {address}"
+                )
+            else:
+                return read_data      #type: ignore Type checker might not realize this is always an int due to the assertion above
+
+        return run_tests_for_function(
+            test_args,
+            test_expected,
+            ram_read_write,
+        )
+        
+    test_module(
+        "RAM component",
+        [
+            test_address_read_write,
+            test_address_repr,
+            test_ram_read_write,
+        ],
+        verbose=VERBOSE
+    )
+        

@@ -61,7 +61,6 @@ class Bus(CPUComponent):
     """
 
     name: ComponentName
-    active: bool = False
 
     # UI-only metadata describing the last logical connection(s) driven on this bus.
     # Most RTN steps drive a single source->destination transfer, but some visuals
@@ -93,14 +92,72 @@ class Bus(CPUComponent):
         self.last_connections = list(connections or [])
         self._update_display()
 
-    def set_active(self, active: bool) -> None:
-        """Set whether the bus is currently active for highlighting purposes.
+if __name__ == "__main__":
+    from common.tester import run_tests_for_function, test_module
+
+    VERBOSE = False
+    # Default verbose value for all tests, to change the value for 1 test only, 
+    # pass the value as an argument to the tester at the bottom of this file
+    
+    class NonDisplayer:
+        """Bypass of default displayer to avoid terminal spaming"""
+        def update_display(self) -> None:
+            pass
+
+    def test_write():
+        """Test write() method raises appropriate error."""
+        bus = Bus(ComponentName.INNER_DATA_BUS)
         
-        The UI highlights active buses to show which data paths are in use during
-        the current RTN step.
+        return run_tests_for_function(
+            [(42,)],
+            ["error"],
+            bus.write,
+            "direct write to bus should raise an error")
+    
+    def test_read():
+        """Test read() method returns most recent result."""
+        bus = Bus(ComponentName.INNER_DATA_BUS)
         
-        Args:
-            active: True to highlight the bus, False to dim it.
-        """
-        self.active = active
-        self._update_display()
+        return run_tests_for_function(
+            [(42,)],
+            ["error"],
+            bus.read,
+            "direct write to bus should raise an error")
+        
+    def test_set_last_connection():
+        """Test set_last_connections() updates the last_connections attribute."""
+        bus = Bus(ComponentName.INNER_DATA_BUS, displayer=NonDisplayer())
+        
+        test_args = [
+            ([(ComponentName.PC, ComponentName.MAR)],),
+            ([],),
+            (None,),
+        ]
+        test_expected = [
+            [(ComponentName.PC, ComponentName.MAR)],
+            [],
+            [],
+        ]
+
+        def test_last_connections_setter(connections):
+            bus.set_last_connections(connections)
+            return bus.last_connections
+        
+        return run_tests_for_function(
+            test_args,
+            test_expected,
+            test_last_connections_setter,
+            "set_last_connections should update the last_connections attribute"
+        )
+    
+    test_module(
+        "buses",
+        [
+            test_write,
+            test_read,
+            test_set_last_connection,
+        ],
+        verbose=VERBOSE
+    )
+        
+    

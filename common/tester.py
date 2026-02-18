@@ -29,14 +29,14 @@ How to use:
 
 Example:
     from assembler.assembler import _parse_immediate_operand
-    
+
     test_args = [
         ("#42",),    # Decimal literal
         ("B1010",),  # Binary literal
         ("&2A",),    # Hexadecimal literal
     ]
     test_expected = [42, 10, 42]
-    
+
     run_tests_for_function(
         test_args,
         test_expected,
@@ -64,17 +64,20 @@ Illustrates:
 
 from typing import Callable
 
-def run_tests_for_function(args: list[tuple], expected: list, function: Callable, comment=""):
+
+def run_tests_for_function(
+    args: list[tuple], expected: list, function: Callable, comment=""
+) -> bool:
     """Test a function against multiple input/output pairs, including error cases.
-    
+
     Runs the given function against each set of arguments and compares the
     result to the corresponding expected value. Prints a summary: either
     "OK" if all tests pass, or "FAIL" with details for each failed test.
-    
+
     Special case: Use the string "error" as an expected value to indicate that
     the function should raise an exception for that input. The function will
     pass the test if any exception is raised (we don't check the exception type).
-    
+
     Args:
         args: List of argument tuples. Each tuple contains the arguments for
             one test case. Example: [("#42",), ("B1010",), ("&2A",)]
@@ -86,24 +89,25 @@ def run_tests_for_function(args: list[tuple], expected: list, function: Callable
             for each arg in args).
         comment: Optional string describing what this batch of tests covers.
             Appears in the test report for clarity.
-    
+
     Returns:
-        None. Prints results to stdout.
-    
+        bool. True if and only if all cases passed. Used to chained multiple tests
+        and obtain a complete result at the end.
+
     Raises:
         No exceptions raised by this function; assertion failures and
         unexpected exceptions are reported as "FAIL" with details.
-    
+
     Example:
         # Test the _parse_immediate_operand function, including error cases
         test_args = [("#42",), ("B1010",), ("&2A",), ("invalid",)]
         expected = [42, 10, 42, "error"]  # Last case should raise an error
         run_tests_for_function(test_args, expected, _parse_immediate_operand,
                                comment="immediate operands with error handling")
-        
+
         # Output (if all pass):
         # test _parse_immediate_operand (immediate operands with error handling) ... OK
-        
+
         # Output (if some fail):
         # test _parse_immediate_operand (immediate operands with error handling) ... FAIL
         #
@@ -126,15 +130,39 @@ def run_tests_for_function(args: list[tuple], expected: list, function: Callable
             if exp == "error":
                 continue
             else:
-                fail_messages.append(f"Test {i} failed: for args {arg}:\n  expected {exp}\n  but got exception {e}")
+                fail_messages.append(
+                    f"Test {i} failed: for args {arg}:\n  expected {exp}\n  but got exception {e}"
+                )
                 passed = False
                 continue
         if result != exp:
-            fail_messages.append(f"Test {i} failed: for args {arg}:\n  expected {exp}\n  but got {result}")
+            fail_messages.append(
+                f"Test {i} failed: for args {arg}:\n  expected {exp}\n  but got {result}"
+            )
             passed = False
     if passed:
         print(report + "OK")
+        return True
     else:
         print(report + "FAIL")
         for msg in fail_messages:
             print("\n  " + msg)
+        return False
+
+def test_module(module_name: str, test_functions: list, verbose=False):
+    # Run all tests
+    print(f"\n------------------------\nTesting {module_name.upper()}:\n------------------------\n")
+    results = [test_function(verbose) for test_function in test_functions]
+    success = True
+    for result in results:
+        if not result:
+            success = False
+            break
+    if success:
+        print(
+            f"\n------------------------\n{module_name.upper()}: ALL TESTS PASSED\n------------------------\n"
+        )
+    else:
+        print(
+            f"\n------------------------\n{module_name.upper()}: FAILED\n------------------------\n"
+        )

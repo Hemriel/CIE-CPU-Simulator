@@ -79,21 +79,21 @@ from simulator.component import CPUComponent
 @dataclass
 class Register(CPUComponent):
     """A CPU register with value storage and control signal tracking for RTN visualization.
-    
+
     This class models both general-purpose registers (ACC, IX) and special-purpose
     registers (PC, MAR, MDR, CIR) as defined in CIE 9618. Each register stores a
     word-sized value and tracks which control signal most recently affected it,
     enabling the UI to visualize the fetch-decode-execute cycle in real time.
-    
+
     The register enforces word size constraints automatically: all stored values are
     masked to 16 bits (0-65535). When an operation would overflow (e.g., incrementing
     65535), the value wraps around using modulo arithmetic, matching real hardware behavior.
-    
+
     Control signal tracking makes the RTN sequence explicit: when the UI displays
     this register, it can show not just the current value but also which operation
     (READ, WRITE, INC, DEC) is active, connecting the code execution to CIE's
     Register Transfer Notation.
-    
+
     Attributes:
         name: The register identifier (from ComponentName enum, e.g., ComponentName.PC).
         _control: The most recent ControlSignal asserted on this register, or None when idle.
@@ -110,11 +110,11 @@ class Register(CPUComponent):
 
     def _set_value(self, value: int):
         """Update the register value and enforce word size constraints.
-        
+
         This method is called internally whenever the register's stored value changes
         (via write, inc, dec operations). It applies the word size mask to ensure the
         value fits in 16 bits, then triggers a UI refresh.
-        
+
         Args:
             value: The new value to store (may be any integer; will be masked to 16 bits).
         """
@@ -126,11 +126,11 @@ class Register(CPUComponent):
 
     def _set_control(self, control: ControlSignal | None):
         """Update the control signal and refresh the visual display.
-        
+
         This method records which control signal is currently active on the register.
         The UI uses this to highlight the active RTN step. For example, during
         ACC ← ALU, the control signal shows that ACC is being written to.
-        
+
         Args:
             control: The ControlSignal to assert (e.g., ControlSignal.READ, ControlSignal.WRITE),
                 or None to clear the control signal when the register is idle.
@@ -140,7 +140,7 @@ class Register(CPUComponent):
 
     def inc(self, offset: int = 1):
         """Increment the register by one and assert the INC control signal.
-        
+
         This operation is used in RTN sequences like PC ← PC + 1 during instruction
         fetch. The INC control signal is displayed to show students which operation
         is active. Overflow is handled automatically (65535 + 1 wraps to 0).
@@ -152,7 +152,7 @@ class Register(CPUComponent):
 
     def dec(self, offset: int = 1):
         """Decrement the register by one and assert the DEC control signal.
-        
+
         This operation is the complement of inc(). Underflow is handled automatically
         (0 - 1 wraps to 65535).
 
@@ -163,11 +163,11 @@ class Register(CPUComponent):
 
     def write(self, value: int):
         """Store a value and assert the WRITE control signal.
-        
+
         This operation represents an RTN transfer like ACC ← MDR. The value is masked
         to 16 bits automatically. The WRITE control signal is displayed to show that
         this register is being updated.
-        
+
         Args:
             value: The value to store. Will be masked to 16 bits (0 to 65535).
         """
@@ -176,12 +176,12 @@ class Register(CPUComponent):
 
     def read(self) -> int:
         """Assert the READ control signal and return the stored value.
-        
+
         This operation represents reading a register during an RTN transfer like
         MDR ← PC. The READ control signal is displayed to show that this register
         is being accessed. The returned value is the current stored value without
         any modifications.
-        
+
         Returns:
             The current stored value (0 to 65535).
         """
@@ -190,7 +190,7 @@ class Register(CPUComponent):
 
     def reset_control(self):
         """Clear any active control signal so the register appears idle.
-        
+
         This is called after an RTN step completes, to reset the display and prepare
         for the next operation. Without this, the register would show the previous
         operation's control signal indefinitely.
@@ -200,7 +200,7 @@ class Register(CPUComponent):
 
     def _update_display(self):
         """Refresh the display for this register (inherited from CPUComponent).
-        
+
         This method is called automatically whenever the register's value or control
         signal changes, ensuring the UI stays synchronized with the register state.
         """
@@ -208,11 +208,156 @@ class Register(CPUComponent):
 
     def __repr__(self) -> str:
         """Return a human-readable representation of the register value.
-        
+
         Used for debugging and UI display to show the current register value
         in hexadecimal format (4 digits, zero-padded).
-        
+
         Returns:
             The stored value as a 4-digit hexadecimal string (e.g., '042A').
         """
         return f"{self._value:04X}"
+
+
+if __name__ == "__main__":
+    from common.tester import run_tests_for_function, test_module
+    from simulator.component import NonDisplayer
+
+    VERBOSE = False
+    # Default verbose value for all tests
+
+    def test_value_setter(verbose=VERBOSE):
+        """Test that the value setter correctly masks to 16 bits."""
+        reg = Register(name=ComponentName.PC)
+        if not verbose:
+            reg.displayer = NonDisplayer()  # Disable display updates for cleaner test output
+
+        test_cases = [
+            (0, 0),
+            (1, 1),
+            (65535, 65535),
+            (65536, 0),  # Wraps around
+            (65537, 1),  # Wraps around
+            (-1, 65535),  # Negative wraps to max
+            (-2, 65534),  # Negative wraps to max - 1
+        ]
+        args = [(input,) for input, _ in test_cases]
+        expected = [expected for _, expected in test_cases]
+
+        def value_setter(input):
+            reg._set_value(input)
+            return reg._value
+        
+        return run_tests_for_function(
+            args,
+            expected,
+            value_setter,
+            comment="value setter with masking",
+        )
+    
+    def test_control_signal(verbose=VERBOSE):
+        """Test that control signals are set correctly on read/write/inc/dec."""
+        reg = Register(name=ComponentName.ACC)
+        if not verbose:
+            reg.displayer = NonDisplayer()  # Disable display updates for cleaner test output
+
+        test_cases = [
+            ControlSignal.READ,
+            ControlSignal.WRITE,
+            ControlSignal.INC,
+            ControlSignal.DEC,
+            None,  # Reset control
+        ]
+        args = [(signal,) for signal in test_cases]
+        expected = test_cases  # Expect the control signal to be set as given
+
+        def control_setter(signal):
+            if signal is None:
+                reg.reset_control()
+            else:
+                reg._set_control(signal)
+            return reg._control
+        return run_tests_for_function(
+            args,
+            expected,
+            control_setter,
+            comment="control signal setter",
+        )
+    
+    def test_inc(verbose=VERBOSE):
+        """Test that inc() correctly increments and wraps values."""
+        reg = Register(name=ComponentName.IX)
+        if not verbose:
+            reg.displayer = NonDisplayer()  # Disable display updates for cleaner test output
+
+        test_cases = [
+            ((0,), 1),
+            ((65534,), 65535),
+            ((65535,), 0),      # Wraps around
+            ((0,7), 7),         # with second optional offset argument
+            ((534,538), 1072),  # 534 + 538 = 1072, no wrap
+            ((65535,100), 99), # Wraps around
+        ]
+        args = [input for input, _ in test_cases]
+        expected = [expected for _, expected in test_cases]
+
+        def incrementer(input, offset=None):
+            reg._set_value(input)  # Set initial value
+            if offset is not None:
+                reg.inc(offset)  # Increment by offset
+            else:
+                reg.inc()  # Increment by 1
+            if not reg._control == ControlSignal.INC:
+                raise AssertionError(f"Expected control signal INC but got {reg._control}")
+            return reg._value
+        
+        return run_tests_for_function(
+            args,
+            expected,
+            incrementer,
+            comment="increment operation with wrapping",
+        )
+    
+    def test_dec(verbose=VERBOSE):
+        """Test that dec() correctly decrements and wraps values."""
+        reg = Register(name=ComponentName.IX)
+        if not verbose:
+            reg.displayer = NonDisplayer()  # Disable display updates for cleaner test output
+
+        test_cases = [
+            ((1,), 0),
+            ((65535,), 65534),
+            ((0,), 65535),          # Wraps around
+            ((65535,100), 65435),   # with second optional offset argument
+            ((534,532), 2),         # 534 - 532 = 2, no wrap
+            ((0,7), 65529),         # Wraps around
+        ]
+        args = [input for input, _ in test_cases]
+        expected = [expected for _, expected in test_cases]
+
+        def decrementer(input, offset=None):
+            reg._set_value(input)  # Set initial value
+            if offset is not None:
+                reg.dec(offset)  # Increment by offset
+            else:
+                reg.dec()  # Increment by 1
+            if not reg._control == ControlSignal.DEC:
+                raise AssertionError(f"Expected control signal DEC but got {reg._control}")
+            return reg._value
+        
+        return run_tests_for_function(
+            args,
+            expected,
+            decrementer,
+            comment="decrement operation with wrapping",
+        )
+
+    test_module(
+        "register",
+        [
+            test_value_setter,
+            test_control_signal,
+            test_inc,
+            test_dec,
+        ],
+        verbose=VERBOSE
+    )

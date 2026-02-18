@@ -98,6 +98,10 @@ class TerminalDisplayer:
     def __repr__(self) -> str:
         return "TerminalDisplayer"
 
+class NonDisplayer:
+        """Bypass of default displayer to avoid terminal spaming during tests"""
+        def update_display(self) -> None:
+            pass
 
 @dataclass
 class CPUComponent(Protocol):
@@ -109,6 +113,7 @@ class CPUComponent(Protocol):
     """
 
     name: ComponentName
+    active: bool = False
     last_active: bool = False
     displayer: Displayer | None = None
 
@@ -140,6 +145,18 @@ class CPUComponent(Protocol):
             data: The integer value to store or consume.
         """
         raise NotImplementedError("Subclasses must implement the write method.")
+
+    def set_active(self, active: bool) -> None:
+        """Set whether the bus is currently active for highlighting purposes.
+        
+        The UI highlights active buses to show which data paths are in use during
+        the current RTN step.
+        
+        Args:
+            active: True to highlight the bus, False to dim it.
+        """
+        self.active = active
+        self._update_display()
 
     def set_last_active(self, active: bool) -> None:
         """Record whether the component was active during the last cycle.

@@ -130,8 +130,8 @@ class ALU(CPUComponent):
     def set_operands(self, acc: int, operand: int) -> None:
         """Provide operands from register transfers and redraw the panel."""
 
-        self.acc = acc
-        self.operand = operand
+        self.acc = acc % (1 << WORD_SIZE) # Wrap to 16-bit word (2^WORD_SIZE)
+        self.operand = operand % (1 << WORD_SIZE) 
         self._update_display()
 
     def compute(self) -> None:
@@ -180,202 +180,206 @@ class ALU(CPUComponent):
 
 # Run tests when this module is executed directly
 if __name__ == "__main__":
-    from common.tester import run_tests_for_function
-    
-    # Test ADD operation: normal values, boundary (overflow), and wraparound
-    def test_add():
-        """Test ADD operation with various operand combinations."""
+    from common.tester import run_tests_for_function, test_module
+    from simulator.component import NonDisplayer
+
+    VERBOSE = False     #Should the tests be verbose or not be default
+
+    def setup_alu_for_test(control: ControlSignal, acc: int, operand: int, verbose = VERBOSE) -> ALU:
+        """Helper to create and configure an ALU for testing."""
         alu = ALU()
-        
-        test_cases = [
-            (10, 20, 30),               # Normal: 10 + 20 = 30
-            (0, 0, 0),                  # Boundary: 0 + 0 = 0
-            (65535, 1, 0),              # Overflow: wraps to 0
-            (32767, 32768, 65535),      # Large values: wraps
-        ]
-        
-        failed = False
-        for acc, operand, expected in test_cases:
-            alu.set_mode(ControlSignal.ADD)
-            alu.set_operands(acc, operand)
-            alu.compute()
-            result = alu.read()
-            if result != expected:
-                print(f"  ADD {acc} + {operand}: expected {expected}, got {result} [FAIL]")
-                failed = True
-        
-        if not failed:
-            print("  ADD: PASS")
-    
-    # Test SUB operation: normal values, boundary (negative/wrap), zero result
-    def test_sub():
-        """Test SUB operation with various operand combinations."""
-        alu = ALU()
-        
-        test_cases = [
-            (20, 10, 10),               # Normal: 20 - 10 = 10
-            (10, 10, 0),                # Boundary: 10 - 10 = 0
-            (5, 10, (1 << 16) - 5),     # Negative wraps
-            (0, 1, 65535),              # Boundary: 0 - 1 wraps to 65535
-        ]
-        
-        failed = False
-        for acc, operand, expected in test_cases:
-            alu.set_mode(ControlSignal.SUB)
-            alu.set_operands(acc, operand)
-            alu.compute()
-            result = alu.read()
-            if result != expected:
-                print(f"  SUB {acc} - {operand}: expected {expected}, got {result} [FAIL]")
-                failed = True
-        
-        if not failed:
-            print("  SUB: PASS")
-    
-    # Test AND operation: various bit patterns
-    def test_and():
-        """Test AND operation with various bitwise patterns."""
-        alu = ALU()
-        
-        test_cases = [
-            (0xFF, 0xF0, 0xF0),         # Partial overlap
-            (0xFFFF, 0xFFFF, 0xFFFF),   # All bits set
-            (0xFFFF, 0x0000, 0x0000),   # No overlap
-            (0xAA, 0x55, 0x00),         # Alternating bits
-        ]
-        
-        failed = False
-        for acc, operand, expected in test_cases:
-            alu.set_mode(ControlSignal.AND)
-            alu.set_operands(acc, operand)
-            alu.compute()
-            result = alu.read()
-            if result != expected:
-                print(f"  AND 0x{acc:04X} & 0x{operand:04X}: expected 0x{expected:04X}, got 0x{result:04X} [FAIL]")
-                failed = True
-        
-        if not failed:
-            print("  AND: PASS")
-    
-    # Test OR operation: set bits from either operand
-    def test_or():
-        """Test OR operation with various bitwise patterns."""
-        alu = ALU()
-        
-        test_cases = [
-            (0x0F, 0xF0, 0xFF),         # Complementary patterns
-            (0x0000, 0x0000, 0x0000),   # Both zero
-            (0xFFFF, 0x0000, 0xFFFF),   # All bits set
-            (0xAA, 0x55, 0xFF),         # Alternating
-        ]
-        
-        failed = False
-        for acc, operand, expected in test_cases:
-            alu.set_mode(ControlSignal.OR)
-            alu.set_operands(acc, operand)
-            alu.compute()
-            result = alu.read()
-            if result != expected:
-                print(f"  OR 0x{acc:04X} | 0x{operand:04X}: expected 0x{expected:04X}, got 0x{result:04X} [FAIL]")
-                failed = True
-        
-        if not failed:
-            print("  OR: PASS")
-    
-    # Test XOR operation: bits differ between operands
-    def test_xor():
-        """Test XOR operation with various bitwise patterns."""
-        alu = ALU()
-        
-        test_cases = [
-            (0xFFFF, 0x0000, 0xFFFF),   # Different
-            (0x5555, 0x5555, 0x0000),   # Same values
-            (0xF0, 0x0F, 0xFF),         # Complementary
-            (0xAA, 0x55, 0xFF),         # Alternating inverted
-        ]
-        
-        failed = False
-        for acc, operand, expected in test_cases:
-            alu.set_mode(ControlSignal.XOR)
-            alu.set_operands(acc, operand)
-            alu.compute()
-            result = alu.read()
-            if result != expected:
-                print(f"  XOR 0x{acc:04X} ^ 0x{operand:04X}: expected 0x{expected:04X}, got 0x{result:04X} [FAIL]")
-                failed = True
-        
-        if not failed:
-            print("  XOR: PASS")
-    
-    # Test CMP operation: comparison flag set/clear based on equality
-    def test_cmp():
-        """Test CMP operation and flag component behavior."""
-        alu = ALU()
-        
-        test_cases = [
-            (100, 100, True),           # Equal
-            (100, 50, False),           # Not equal
-            (0, 0, True),               # Boundary: zero equals zero
-            (65535, 65535, True),       # Boundary: max value equals itself
-        ]
-        
-        failed = False
-        for acc, operand, expected_flag in test_cases:
-            alu.set_mode(ControlSignal.CMP)
-            alu.set_operands(acc, operand)
-            alu.compute()
-            flag_result = alu.flag_component.read()
-            if flag_result != expected_flag:
-                print(f"  CMP {acc} == {operand}: flag expected {expected_flag}, got {flag_result} [FAIL]")
-                failed = True
-        
-        if not failed:
-            print("  CMP: PASS")
-    
-    # Test read() method: returns most recent result
-    def test_read():
-        """Test read() method returns correct result after compute()."""
-        alu = ALU()
-        
-        test_cases = [
-            (ControlSignal.ADD, 10, 5, 15),
-            (ControlSignal.SUB, 20, 7, 13),
-            (ControlSignal.AND, 0xFF, 0x0F, 0x0F),
-        ]
-        
-        failed = False
-        for control, acc, operand, expected in test_cases:
-            alu.set_mode(control)
-            alu.set_operands(acc, operand)
-            alu.compute()
-            result = alu.read()
-            if result != expected:
-                print(f"  read() after {control}: expected {expected}, got {result} [FAIL]")
-                failed = True
-        
-        if not failed:
-            print("  read(): PASS")
-    
-    # Test write() method: should raise AbnormalComponentUseError
+        if not verbose:
+            alu.displayer = NonDisplayer()
+            alu.flag_component.displayer = NonDisplayer()
+        alu.set_mode(control)
+        alu.set_operands(acc, operand)
+        return alu
+
     def test_write():
         """Test write() method raises appropriate error."""
         alu = ALU()
         
-        try:
-            alu.write(42)
-            print(f"  write(): FAIL - expected exception but none raised")
-        except AbnormalComponentUseError:
-            print(f"  write(): PASS")
-        except Exception as e:
-            print(f"  write(): FAIL - raised {type(e).__name__} instead of AbnormalComponentUseError")
+        return run_tests_for_function(
+            [(42,)],
+            ["error"],
+            alu.write,
+            "direct write to ALU should raise an error")
     
-    # Run all tests
-    print("Testing ALU class:")
-    test_add()
-    test_sub()
-    test_and()
-    test_or()
-    test_xor()
-    test_cmp()
-    test_read()
-    test_write()
+    def test_read():
+        """Test read() method returns most recent result."""
+        alu = ALU()
+        
+        alu.result = 12345
+        return run_tests_for_function(
+            [()],
+            [12345],
+            alu.read,
+            "direct read shoud return value stored in result")
+
+    # Test ADD operation: normal values, boundary (overflow), and wraparound
+    def test_add(verbose = VERBOSE):
+        """Test ADD operation with various operand combinations."""
+        alu = setup_alu_for_test(ControlSignal.ADD, 0, 0, verbose)
+
+        test_cases = [
+            (10, 20, 30),               # Normal: 10 + 20 = 30
+            (0, 0, 0),                  # Boundary: 0 + 0 = 0
+            (65535, 1, 0),              # Overflow: wraps to 0
+            (32767, 32768, 65535),      # Large values
+        ]
+
+        def add(acc, operand):
+            alu.set_operands(acc, operand)
+            alu.compute()
+            return alu.read()
+        
+        return run_tests_for_function(
+            [(acc, operand) for acc, operand, _ in test_cases],
+            [expected for _, _, expected in test_cases],
+            add,
+        )
+
+    
+    # Test SUB operation: normal values, boundary (negative/wrap), zero result
+    def test_sub(verbose = VERBOSE):
+        """Test SUB operation with various operand combinations."""
+        alu = setup_alu_for_test(ControlSignal.SUB, 0, 0, verbose)
+
+        test_cases = [
+            (30, 20, 10),               # Normal: 30 - 20 = 10
+            (0, 0, 0),                  # Boundary: 0 - 0 = 0
+            (0, 1, 0xFFFF),             # Negative values wrap around
+            (20, 30, 0xFFF6),           # Negative values wrap around
+            (32768, 32767, 1),      # Large values
+        ]
+
+        def sub(acc, operand):
+            alu.set_operands(acc, operand)
+            alu.compute()
+            return alu.read()
+        
+        return run_tests_for_function(
+            [(acc, operand) for acc, operand, _ in test_cases],
+            [expected for _, _, expected in test_cases],
+            sub,
+        )
+    
+    # Test AND operation: various bit patterns
+    def test_and(verbose = VERBOSE):
+        """Test AND operation with various bitwise patterns."""
+        alu = setup_alu_for_test(ControlSignal.AND, 0, 0, verbose)
+
+        test_cases = [
+            (0b0000_0000, 0b0000_0001, 0b0000_0000),
+            (0b0000_0001, 0b0000_0001, 0b0000_0001),
+            (0b1000_0000, 0b1000_0000, 0b1000_0000),
+            (0b0000_0000, 0b0000_0000, 0b0000_0000),
+            (0b1111_1111, 0b1111_1111, 0b1111_1111),
+            (0b1010_1010, 0b0101_0101, 0b0000_0000),
+        ]
+
+        def and_op(acc, operand):
+            alu.set_operands(acc, operand)
+            alu.compute()
+            return alu.read()
+        
+        return run_tests_for_function(
+            [(acc, operand) for acc, operand, _ in test_cases],
+            [expected for _, _, expected in test_cases],
+            and_op,
+        )
+    
+    # Test OR operation: set bits from either operand
+    def test_or(verbose = VERBOSE):
+        """Test OR operation with various bitwise patterns."""
+        alu = setup_alu_for_test(ControlSignal.OR, 0, 0, verbose)
+
+        test_cases = [
+            (0b0000_0000, 0b0000_0000, 0b0000_0000),
+            (0b0000_0000, 0b0000_0001, 0b0000_0001),
+            (0b0000_0001, 0b0000_0000, 0b0000_0001),
+            (0b0000_0001, 0b0000_0001, 0b0000_0001),
+            (0b1000_0000, 0b1000_0000, 0b1000_0000),
+            (0b0000_0000, 0b0000_0000, 0b0000_0000),
+            (0b1111_1111, 0b1111_1111, 0b1111_1111),
+            (0b1010_1010, 0b0101_0101, 0b1111_1111),
+        ]
+
+        def or_op(acc, operand):
+            alu.set_operands(acc, operand)
+            alu.compute()
+            return alu.read()
+        
+        return run_tests_for_function(
+            [(acc, operand) for acc, operand, _ in test_cases],
+            [expected for _, _, expected in test_cases],
+            or_op,
+        )
+    
+    # Test XOR operation: bits differ between operands
+    def test_xor(verbose = VERBOSE):
+        """Test XOR operation with various bitwise patterns."""
+        alu = setup_alu_for_test(ControlSignal.XOR, 0, 0, verbose)
+
+        test_cases = [
+            (0b0000_0000, 0b0000_0000, 0b0000_0000),
+            (0b0000_0000, 0b0000_0001, 0b0000_0001),
+            (0b0000_0001, 0b0000_0000, 0b0000_0001),
+            (0b0000_0001, 0b0000_0001, 0b0000_0000),
+            (0b1000_0000, 0b1000_0000, 0b0000_0000),
+            (0b0000_0000, 0b1000_0000, 0b1000_0000),
+            (0b1111_1111, 0b1111_1111, 0b0000_0000),
+            (0b1010_1010, 0b0101_0101, 0b1111_1111),
+        ]
+
+        def xor_op(acc, operand):
+            alu.set_operands(acc, operand)
+            alu.compute()
+            return alu.read()
+        
+        return run_tests_for_function(
+            [(acc, operand) for acc, operand, _ in test_cases],
+            [expected for _, _, expected in test_cases],
+            xor_op,
+        )
+    
+    # Test CMP operation: comparison flag set/clear based on equality
+    def test_cmp(verbose = VERBOSE):
+        """Test CMP operation and flag component behavior."""
+        alu = setup_alu_for_test(ControlSignal.CMP, 0, 0, verbose)
+
+        test_cases = [
+            (0, 0, True),
+            (1, 1, True),
+            (0, 1, False),
+            (1, 0, False),
+            (0x10000, 0, True),
+            (-1, 0xFFFF, True),
+            (253, 253, True)
+        ]
+
+        def cmp_op(acc, operand):
+            alu.set_operands(acc, operand)
+            alu.compute()
+            return alu.flag_component.value
+        
+        return run_tests_for_function(
+            [(acc, operand) for acc, operand, _ in test_cases],
+            [expected for _, _, expected in test_cases],
+            cmp_op,
+        )
+
+    test_module(
+        "ALU Class",
+        [
+            test_read,
+            test_write,
+            test_add,
+            test_sub,
+            test_and,
+            test_or,
+            test_xor,
+            test_cmp
+        ],
+        VERBOSE
+    )
