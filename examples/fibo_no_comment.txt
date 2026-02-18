@@ -1,7 +1,7 @@
-PREV: #0 ; 2C
-CURR: #1 ; 2D
-TMP: #0 ; 2E
-COUNTER: #18 ; 2F
+PREV: #0
+CURR: #1
+TMP: #0
+COUNTER: #18
 LDR &C8
 LDD PREV
 STX #0

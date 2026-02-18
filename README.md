@@ -69,7 +69,8 @@ Students curious about "how does an assembler work?" or "how is a CPU simulated?
 
 - **CIE 9618 register set**: PC, MAR, MDR, CIR, ACC, IX, comparison flag
 - **Fetch-Decode-Execute cycle**: Explicit phases with RTN step sequences
-- **Instruction set**: ADD, SUB, AND, OR, XOR, LSL, LSR, LDR, STR, JMP, CMP, JPE/JPN, IN, OUT, END
+- **Instruction set**: ADD, SUB, AND, OR, XOR, LSL, LSR, LDR, STR, JMP, CMP, JPE/JPN, END
+- **Missing instructions**: Current version doesn't cover IN / OUT instructions (WIP)
 - **ALU operations**: Arithmetic (add, subtract) and logic (AND, OR, XOR) with result visualization
 - **Memory model**: 64K addressable 16-bit words
 - **I/O support**: Character-based IN/OUT instructions with visual queues
@@ -77,6 +78,7 @@ Students curious about "how does an assembler work?" or "how is a CPU simulated?
 ### User Interface (Textual-based)
 
 - **ASCII-art visualization**: Buses, registers, and memory displayed in a terminal-friendly layout
+- **Number representation**: Cycle through representation in binary, decimal or hexadecimal
 - **Interactive stepping**: Advance one RTN step at a time or run continuously
 - **Component highlighting**: Active components are visually highlighted during each step
 - **Live assembly editor**: Write, edit, and compile assembly code in-app
@@ -133,32 +135,17 @@ python CIE_CPU_Sim.py
 
 - `Ctrl+S`: Compile the assembly code in the editor (starts the interactive assembly process)
 - `T`: Tick (advance one step)
+- `Ctrl+T`: Toggle auto-tick
+- `+`/`-`: Change auto-tick speed
+- `Ctrl+1/2/3`: Change numbering system
 - `Q`: Quit
 
 ### Example Program
 
-Try this simple Fibonacci program:
+An example fibonacci calculator can be found under `examples/`, in fully commented, no comment, and binary versions.
+There is currently no way to load it directly in app, so copy paste it inside the terminal or write your own version.
 
-```assembly
-      LDR #0
-      STR VAR1
-      LDR #1
-      STR VAR2
-LOOP: LDR VAR1
-      OUT
-      ADD VAR2
-      STR VAR3
-      LDR VAR2
-      STR VAR1
-      LDR VAR3
-      STR VAR2
-      JMP LOOP
-VAR1: #0
-VAR2: #1
-VAR3: #0
-```
-
-Press `Ctrl+S` to compile, then press `T` repeatedly to step through assembly and execution.
+Press `Ctrl+S` to compile, then press `T` or `Ctrl+T` to step through assembling and execution.
 
 ---
 
@@ -166,26 +153,22 @@ Press `Ctrl+S` to compile, then press `T` repeatedly to step through assembly an
 
 ```
 CPU_Sim/
-├── .design/
+├── .design/                  # Design and maintenance documents
 │   ├── CIE_specs.md              # Detailed CIE specification notes
 │   ├── references.md             # list of curriculum points illustrated
 │   ├── review_pointers.md        # Code review guidelines
 │   └── review.md                 # Code review results
-├── assembler/
+├── assembler/                # Assembler related module
 │   └── assembler.py              # Two-pass assembler with stepper
-├── common/
+├── common/                   # Imports shared across whole project
 │   ├── constants.py              # Shared enums and constants
-│   └── instructions.py           # Instruction metadata and RTN sequences
-├── cpu/
-│   ├── ALU.py                    # Arithmetic Logic Unit
-│   ├── buses.py                  # Address and data bus models
-│   ├── component.py              # Base component protocol
-│   ├── cpu_io.py                 # I/O components (IN/OUT)
-│   ├── cpu.py                    # Top-level CPU class
-│   ├── CU.py                     # Control Unit (fetch-decode-execute)
-│   ├── RAM.py                    # Memory model
-│   └── register.py               # Register implementation
-├── interface/
+│   ├── instructions.py           # Instruction metadata and RTN sequences
+│   ├── tester.py                 # Tester functions
+│   └── utils.py                  # Utility functions
+├── examples/                 # Example fibonacci
+│   ├── fibo_commented.txt        # Commented example Fibonacci program
+│   └── fibo_no_comment2.txt      # Uncommented version of the example
+├── interface/                # Textualize related module
 │   ├── alu_display.py            # ALU visualization
 │   ├── bus_ascii.py              # ASCII-art bus visualization
 │   ├── control_unit_display.py   # Control Unit visualization
@@ -200,15 +183,19 @@ CPU_Sim/
 │   ├── TickerController.py       # Stepper control logic
 │   ├── variable_label_display.py # Variable label table
 │   └── vspacer.py                # vertical spacer widget
-├── examples/
-│   ├── fibo.txt                  # Example Fibonacci program
-│   └── fibo2.txt                 # Additional example
-├── tests/
-│   └── TODO
+├── simulator/                # Backend modules for the simulation
+│   ├── ALU.py                    # Arithmetic Logic Unit
+│   ├── buses.py                  # Address and data bus models
+│   ├── component.py              # Base component protocol
+│   ├── cpu_io.py                 # I/O components (IN/OUT)
+│   ├── cpu.py                    # Top-level CPU class
+│   ├── CU.py                     # Control Unit (fetch-decode-execute)
+│   ├── RAM.py                    # Memory model
+│   └── register.py               # Register implementation
 ├── CIE_CPU_Sim.py                # Application entry point
-├── requirements.txt              # Project dependencies
 ├── LICENSE                       # MIT License
-└── README.md                     # This file
+├── README.md                     # This file
+└── requirements.txt              # Project dependencies
 ```
 
 ---
@@ -241,7 +228,9 @@ If you're curious about **how this works under the hood**, the codebase is desig
 
 ## 🧪 Testing
 
-TODO
+[WIP]
+Some modules, especially under `simulator/` come with integrated tests inside an `if __name__ == "__main__"` statement.
+More are planned to be added for remaining modules.
 
 ---
 
@@ -255,8 +244,8 @@ TODO
 - [x] Add autorun mode with speed control
 - [-] Add Input and Output instruction logic
 - [-] Block execution when waiting for IN and Input queue is empty
-- [ ] Implement test suite with coverage reports
-- [ ] Save/load assembly programs from files
+- [~] Implement test suite with coverage reports
+- [-] Save/load assembly programs from files
 
 ---
 
